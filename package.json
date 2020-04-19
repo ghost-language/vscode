@@ -1,0 +1,26 @@
+{
+    "name": "ghost-lang",
+    "displayName": "Ghost Lang",
+    "description": "Syntax highlighting for Ghost",
+    "publisher": "axiom-labs",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.44.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "ghost",
+            "aliases": ["Ghost", "ghost"],
+            "extensions": [".ghost"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "ghost",
+            "scopeName": "source.ghost",
+            "path": "./syntaxes/ghost.tmLanguage.json"
+        }]
+    }
+}
