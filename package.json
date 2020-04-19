@@ -1,9 +1,19 @@
 {
     "name": "ghost-lang",
     "displayName": "Ghost Lang",
-    "description": "Syntax highlighting for Ghost",
+    "description": "Ghost extension for Visual Studio Code.",
     "publisher": "axiom-labs",
     "version": "0.0.1",
+    "license": "MIT",
+    "keywords": ["ghost"],
+    "private": true,
+    "bugs": {
+        "url": "https://github.com/axiom-labs/vscode-ghost/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/axiom-labs/vscode-ghost.git"
+    },
     "engines": {
         "vscode": "^1.44.0"
     },
