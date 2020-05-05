@@ -47,7 +47,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.ghost",
-					"match": "\\b(?:break|else|for|if|import|in|return|while|let)\\b"
+					"match": "\\b(?:break|else|for|if|import|in|return|while|var|class|function)\\b"
 				},
 				{
 					"name": "keyword.operator.ghost",
@@ -55,7 +55,7 @@
 				},
 				{
 					"name": "keyword.operator.logical.ghost",
-					"match": "!|&&|\\|\\|"
+					"match": "!|and|or"
 				},
 				{
 					"name": "keyword.operator.range.ghost",
@@ -79,7 +79,7 @@
 			"patterns": [
 				{
 					"name": "constant.language.ghost",
-					"match": "\\b(true|false|nil)\\b"
+					"match": "\\b(true|false|null)\\b"
 				},
 				{
 					"name": "constant.numeric.ghost",
