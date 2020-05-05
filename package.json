@@ -4,7 +4,7 @@
     "icon": "icon.png",
     "description": "Ghost extension for Visual Studio Code.",
     "publisher": "axiom-labs",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "license": "MIT",
     "keywords": ["ghost"],
     "private": true,
