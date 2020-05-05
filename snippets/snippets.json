@@ -1,0 +1,56 @@
+{
+    "class": {
+        "prefix": "class",
+        "body": "class $1 {\n   $2\n}",
+        "description": "Class definition",
+        "scope": "source.ghost"
+    },
+    "function": {
+        "prefix": "function",
+        "body": "function($1) {\n   $2\n}",
+        "description": "function definition",
+        "scope": "source.ghost"
+    },
+    "else": {
+        "prefix": "else",
+        "body": "else {\n   $1\n}",
+        "description": "else clause",
+        "scope": "source.ghost"
+    },
+    "for": {
+        "prefix": "for",
+        "body": "for ($1; $2; $3) {\n   $4\n}",
+        "description": "for statement",
+        "scope": "source.ghost"
+    },
+    "if": {
+        "prefix": "if",
+        "body": "if ($1) {\n    $2\n}",
+        "description": "if statement",
+        "scope": "source.ghost"
+    },
+    "while": {
+        "prefix": "while",
+        "body": "while ($1) {\n    $2\n}",
+        "desciption": "while statement",
+        "scope": "source.ghost"
+    },
+    "var": {
+        "prefix": "var",
+        "body": "var $1 = $2;",
+        "description": "variable declaration",
+        "scope": "source.ghost"
+    },
+    "print": {
+        "prefix": "print",
+        "body": "print($1);",
+        "description": "Print a string or object with a trailing newline.",
+        "scope": "source.ghost"
+    },
+    "write": {
+        "prefix": "write",
+        "body": "write($1);",
+        "description": "Print a string or object without a trailing newline.",
+        "scope": "source.ghost"
+    }
+}

@@ -3,67 +3,29 @@
 	"name": "Ghost",
 
 	"patterns": [
-		{ "include": "#code" },
-		{ "include": "#class" }
+		{ "include": "#comments" },
+		{ "include": "#keywords" },
+		{ "include": "#statements" },
+		{ "include": "#callables" },
+		{ "include": "#ident" },
+		{ "include": "#strings" },
+		{ "include": "#digits" }
 	],
 
 	"repository": {
-		"comment": {
-			"name": "comment.line.ghost",
-			"match": "//.*"
-		},
-		"block": {
-			"begin": "{",
-			"beginCaptures": {
-				"0": {
-					"name": "punctuation.section.block.begin.ghost"
-				}
-			},
-			"end": "}",
-			"endCaptures": {
-				"0": {
-					"name": "punctuation.section.block.end.ghost"
-				}
-			},
-			"name": "meta.block.ghost",
-			"patterns": [
-				{
-					"include": "#code"
-				},
-				{
-					"name": "meta.block.parameters.ghost",
-					"begin": "\\|",
-					"end": "\\|",
-					"patterns": [
-						{
-							"name": "variable.parameter.function.ghost",
-							"match": "\\w+"
-						}
-					]
-				}
-			]
-		},
-		"keyword": {
+		"keywords": {
 			"patterns": [
 				{
 					"name": "keyword.control.ghost",
-					"match": "\\b(?:break|else|for|if|import|in|return|while|var|class|function)\\b"
-				},
-				{
-					"name": "keyword.operator.ghost",
-					"match": "\\b(is)\\b"
+					"match": "\\b(if|else|while|for|return)\\b"
 				},
 				{
 					"name": "keyword.operator.logical.ghost",
-					"match": "!|and|or"
-				},
-				{
-					"name": "keyword.operator.range.ghost",
-					"match": "(\\.\\.\\.?)"
+					"match": "\\b(and|or)\\b"
 				},
 				{
 					"name": "keyword.operator.arithmetic.ghost",
-					"match": "(\\-|\\+|\\*|\/)"
+					"match": "(\\-|\\+|\\*|\/|%)"
 				},
 				{
 					"name": "keyword.operator.comparison.ghost",
@@ -72,135 +34,119 @@
 				{
 					"name": "keyword.operator.assignment.ghost",
 					"match": "(=)"
+				},
+				{
+					"name": "constant.language.null.ghost",
+					"match": "\\b(null)\\b"
+				},
+				{
+					"name": "constant.language.boolean.ghost",
+					"match": "\\b(true|false)\\b"
+				},
+				{
+					"name": "support.function.builtin.ghost",
+					"match": "\\b(print|write|error|assert)\\b"
+				},
+				{
+					"name": "variable.language.this.ghost",
+					"match": "\\b(this)\\b"
+				},
+				{
+					"name": "variable.language.super.ghost",
+					"match": "\\b(super)\\b"
 				}
 			]
 		},
-		"constant": {
+		"statements": {
 			"patterns": [
 				{
-					"name": "constant.language.ghost",
-					"match": "\\b(true|false|null)\\b"
+					"match": "\\b(var)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+					"captures": {
+						"1": {
+							"name": "storage.type.ghost"
+						},
+						"2": {
+							"name": "support.variable.ghost"
+						}
+					}
 				},
 				{
-					"name": "constant.numeric.ghost",
-					"match": "\\b(0x[0-9a-fA-F]*[0-9]+(\\.?[0.9]*)?(e(\\+|-)?[0-9]+)?)\\b"
+					"match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(([A-Za-z0-9,\\s]*)\\)",
+					"captures": {
+						"1": {
+							"name": "storage.type.function.ghost"
+						},
+						"2": {
+							"name": "entity.name.function.ghost"
+						},
+						"3": {
+							"patterns": [
+								{
+									"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+									"name": "variable.parameter.ghost"
+								}
+							]
+						}
+					}
 				},
 				{
-					"name": "constant.numeric.hexadecimal.ghost",
-					"match": "0x[A-Fa-f0-9]+"
+					"match": "\\b(class)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s*(<)\\s*([A-Za-z_][A-Za-z0-9_]*))?\\b",
+					"captures": {
+						"1": {
+							"name": "storage.type.class.ghost"
+						},
+						"2": {
+							"name": "entity.name.type.class.ghost"
+						},
+						"3": {
+							"name": "storage.modifer.ghost"
+						},
+						"4": {
+							"name": "entity.name.type.class.ghost"
+						}
+					}
 				}
 			]
 		},
-		"variable": {
+		"callables": {
 			"patterns": [
 				{
-					"name": "variable.language.ghost",
-					"match": "\\b(this|super)\\b"
-				},
-				{
-					"name": "variable.other.class.ghost",
-					"match": "\\b__\\w*"
-				},
-				{
-					"name": "variable.other.instance.ghost",
-					"match": "\\b_\\w*"
+					"match": "([A-Za-z_][A-Za-z0-9_]*)\\(",
+					"name": "support.function.ghost"
 				}
 			]
 		},
-		"string": {
+		"strings": {
 			"name": "string.quoted.double.ghost",
 			"begin": "\"",
 			"end": "\"",
-			"patterns": [
-				{ "include": "#stringEscapes" }
-			]
+			"patterns": []
 		},
-		"stringEscapes": {
+		"digits": {
 			"patterns": [
 				{
-					"name": "constant.character.escape.ghost",
-					"match": "\\\\(?:[0\"\\abfnrtv]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{4})"
-				},
-				{
-					"name": "invalid.illegal.uknown-escape.ghost",
-					"match": "\\\\(?:x[0-9A-Fa-f]{0,1}|u[0-9A-Fa-f]{0,3}|U[0-9A-Fa-f]{0,7}|.)"
-				},
-				{
-					"name": "constant.character.interpolation.ghost",
-					"match": "%\\((.*?)\\)"
+					"name": "constant.numeric.ghost",
+					"match": "\\b[0-9]+(?:.[0-9]+)?\\b"
 				}
 			]
 		},
-		"code": {
-			"patterns": [
-				{ "include": "#comment" },
-				{ "include": "#block" },
-				{ "include": "#keyword" },
-				{ "include": "#constant" },
-				{ "include": "#variable" },
-				{ "include": "#string" }
-			]
-		},
-		"method": {
-			"name": "meta.method.ghost",
-			"begin": "(?:\\b(__construct)\\s+)?(\\w+=|\\w+|\\+|-|\\*|\\/|%|<=?|>=?|==|!=?|&|\\||~)",
-			"beginCaptures": {
-				"1": { "name": "storage.modifier.ghost" },
-				"2": { "name": "entity.name.function.ghost" }
-			},
-			"end": "}",
+		"ident": {
 			"patterns": [
 				{
-					"name": "meta.method.identifier.ghost",
-					"begin": "\\(",
-					"end": "\\)",
-					"patterns": [
-						{
-							"name": "variable.parameter.function.ghost",
-							"match": "\\w+"
-						}
-					]
-				},
-				{
-					"name": "meta.method.body.ghost",
-					"begin": "{",
-					"end": "(?=})",
-					"patterns": [
-						{ "include": "#code" }
-					]
+					"name": "variable.other.readwrite.ghost",
+					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
 				}
 			]
 		},
-
-		"class": {
-			"name": "meta.class.ghost",
-			"begin": "(?:\\b(foreign)\\s+)?(\\bclass)\\s+(\\w+)\\s+(?:(\\bis)\\s+(\\w+))?",
-			"beginCaptures": {
-				"1": { "name": "storage.modifier.ghost" },
-				"2": { "name": "storage.modifier.ghost" },
-				"3": { "name": "entity.name.class.ghost" },
-				"4": { "name": "storage.modifier.ghost" },
-				"5": { "name": "entity.name.class.ghost" }
-			},
-			"end": "}",
-			"endCaptures": {
-				"0": { "name": "punctuation.section.class.end.ghost" }
-			},
+		"comments": {
 			"patterns": [
 				{
-					"name": "meta.class.body.ghost",
-					"begin": "{",
-					"beginCaptures": {
-						"0": { "name": "punctuation.section.class.begin.ghost" }
-					},
-					"patterns": [
-						{ "include": "#comment" },
-						{ "include": "#method" }
-					],
-					"end": "(?=})"
+					"name": "comment.line.double-slash.ghost",
+					"match": "\\/\\.*"
 				}
 			]
 		}
 	},
+
 	"scopeName": "source.ghost"
 }
