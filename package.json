@@ -19,9 +19,16 @@
         "vscode": "^1.44.0"
     },
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Snippets"
     ],
     "contributes": {
+        "snippets": [
+            {
+                "language": "ghost",
+                "path": "./snippets/ghost.json"
+            }
+        ],
         "languages": [{
             "id": "ghost",
             "aliases": ["Ghost", "ghost"],
