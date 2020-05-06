@@ -111,7 +111,7 @@
 		"callables": {
 			"patterns": [
 				{
-					"match": "([A-Za-z_][A-Za-z0-9_]*)\\(",
+					"match": "([A-Za-z_][A-Za-z0-9_]*)",
 					"name": "support.function.ghost"
 				}
 			]
@@ -142,7 +142,7 @@
 			"patterns": [
 				{
 					"name": "comment.line.double-slash.ghost",
-					"match": "\\/\\.*"
+					"match": "//.*"
 				}
 			]
 		}
