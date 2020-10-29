@@ -3,15 +3,20 @@
 	"name": "Ghost",
 	"patterns": [
 		{ "include": "#keywords" },
-		{ "include": "#double_quote_strings" },
-		{ "include": "#single_quote_strings" },
+		{ "include": "#strings" },
 		{ "include": "#comments" },
 		{ "include": "#functions" },
-		{ "include": "#constants" }
+		{ "include": "#constants" },
+		{ "include": "#puncuation" },
+		{ "include": "#variable" }
 	],
 	"repository": {
 		"keywords": {
 			"patterns": [
+				{
+					"name": "keyword.function.ghost",
+					"match": "\\b(functions)\\b"
+				},
 				{
 					"name": "keyword.control.ghost",
 					"match": "\\b(if|else|return|while|for|in)\\b"
@@ -30,7 +35,19 @@
 				},
 				{
 					"name": "keyword.operator.assignment.ghost",
-					"match": "(:=)"
+					"match": "(:=|=|\\+=|\\-=|\\*=|/=|%=)"
+				},
+				{
+					"name": "keyword.operator.decrement.ghost",
+					"match": "\\-\\-"
+				},
+				{
+					"name": "keyword.operator.increment.ghost",
+					"match": "\\+\\+"
+				},
+				{
+					"name": "keyword.operator.ellipsis.ghost",
+					"match": "(\\.\\.|\\.\\.\\.)"
 				}
 			]
 		},
@@ -45,16 +62,26 @@
 					"match": "\\b(true|false)\\b"
 				},
 				{
-					"name": "constant.numeric.ghost",
-					"match": "\\b[0-9]+(?:.[0-9]+)?\\b"
+					"name": "constant.numeric.floating-point.ghost",
+					"match": "(\\.\\d+([Ee][-+]\\d+)?i?)\\b|\\b\\d+\\.\\d*(([Ee][-+]\\d+)?i?\\b)?"
+				},
+				{
+					"name": "constant.numeric.integer.ghost",
+					"match": "\\b((0x[0-9a-fA-F]+)|(0[0-7]+i?)|(\\d+([Ee]\\d+)?i?)|(\\d+[Ee][-+]\\d+i?))\\b"
 				}
 			]
 		},
 		"comments": {
 			"patterns": [
 				{
-					"name": "comment",
-					"match": "//.*"
+					"name": "comment.line.ghost",
+					"begin": "//",
+					"end": "\n"
+				},
+				{
+					"name": "comment.block.ghost",
+					"begin": "\/[*]",
+					"end": "[*](\/)"
 				}
 			]
 		},
@@ -66,25 +93,59 @@
 				}
 			]
 		},
-		"double_quote_strings": {
-			"name": "string.quoted.double.ghost",
-			"begin": "\"",
-			"end": "\"",
+		"strings": {
 			"patterns": [
 				{
-					"name": "constant.character.escape.ghost",
-					"match": "\\\\."
+					"name": "string.quoted.single.ghost",
+					"begin": "'",
+					"end": "'"
+				},
+				{
+					"name": "string.quoted.double.ghost",
+					"begin": "\"",
+					"end": "\""
 				}
 			]
 		},
-		"single_quote_strings": {
-			"name": "string.quoted.single.ghost",
-			"begin": "'",
-			"end": "'",
+		"punctuation": {
 			"patterns": [
 				{
-					"name": "constant.character.escape.ghost",
-					"match": "\\\\."
+					"name": "punctuation.terminator.ghost",
+					"match": ";"
+				},
+				{
+					"name": "punctuation.other.comma.ghost",
+					"match": ","
+				},
+				{
+					"name": "punctuation.other.period.ghost",
+					"match": "\\.(?!\\.)"
+				},
+				{
+					"name": "punctuation.other.colon.ghost",
+					"match": ":(?!=)"
+				}
+			]
+		},
+		"variable": {
+			"patterns": [
+				{
+					"name": "variable.other.readwrite.ghost",
+					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+				},
+				{
+					"match": "\\w+(?=\\s\\:\\=)",
+					"name": "variable.other.assignment.ghost"
+				},
+				{
+					"comment": "increment",
+					"match": "(?>\\w+)(?=\\+\\+)",
+					"name": "variable.other.ghost"
+				},
+				{
+					"comment": "decrement",
+					"match": "(?>\\w+)(?=\\-\\-)",
+					"name": "variable.other.ghost"
 				}
 			]
 		}
