@@ -1,5 +1,4 @@
 # Ghost for Visual Studio Code
-
 Provides Visual Studio Code support for the [Ghost](https://ghostlang.org/) programming language.
 
 ## Features

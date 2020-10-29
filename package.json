@@ -3,17 +3,17 @@
     "displayName": "Ghost Lang",
     "icon": "icon.png",
     "description": "Ghost extension for Visual Studio Code.",
-    "publisher": "axiom-labs",
+    "publisher": "ghost-language",
     "version": "0.0.3",
     "license": "MIT",
     "keywords": ["ghost"],
     "private": true,
     "bugs": {
-        "url": "https://github.com/axiom-labs/vscode-ghost/issues"
+        "url": "https://github.com/ghost-language/vscode/issues"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/axiom-labs/vscode-ghost.git"
+        "url": "https://github.com/ghost-language/vscode.git"
     },
     "engines": {
         "vscode": "^1.44.0"

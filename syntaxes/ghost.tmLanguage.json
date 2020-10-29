@@ -1,23 +1,20 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Ghost",
-
 	"patterns": [
-		{ "include": "#comments" },
 		{ "include": "#keywords" },
-		{ "include": "#statements" },
-		{ "include": "#callables" },
-		{ "include": "#ident" },
-		{ "include": "#strings" },
-		{ "include": "#digits" }
+		{ "include": "#double_quote_strings" },
+		{ "include": "#single_quote_strings" },
+		{ "include": "#comments" },
+		{ "include": "#functions" },
+		{ "include": "#constants" }
 	],
-
 	"repository": {
 		"keywords": {
 			"patterns": [
 				{
 					"name": "keyword.control.ghost",
-					"match": "\\b(if|else|while|for|return)\\b"
+					"match": "\\b(if|else|return|while|for|in)\\b"
 				},
 				{
 					"name": "keyword.operator.logical.ghost",
@@ -33,8 +30,12 @@
 				},
 				{
 					"name": "keyword.operator.assignment.ghost",
-					"match": "(=)"
-				},
+					"match": "(:=)"
+				}
+			]
+		},
+		"constants": {
+			"patterns": [
 				{
 					"name": "constant.language.null.ghost",
 					"match": "\\b(null)\\b"
@@ -44,109 +45,49 @@
 					"match": "\\b(true|false)\\b"
 				},
 				{
-					"name": "support.function.builtin.ghost",
-					"match": "\\b(print|write|error|assert)\\b"
-				},
-				{
-					"name": "variable.language.this.ghost",
-					"match": "\\b(this)\\b"
-				},
-				{
-					"name": "variable.language.super.ghost",
-					"match": "\\b(super)\\b"
-				}
-			]
-		},
-		"statements": {
-			"patterns": [
-				{
-					"match": "\\b(var)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
-					"captures": {
-						"1": {
-							"name": "storage.type.ghost"
-						},
-						"2": {
-							"name": "support.variable.ghost"
-						}
-					}
-				},
-				{
-					"match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(([A-Za-z0-9,\\s]*)\\)",
-					"captures": {
-						"1": {
-							"name": "storage.type.function.ghost"
-						},
-						"2": {
-							"name": "entity.name.function.ghost"
-						},
-						"3": {
-							"patterns": [
-								{
-									"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
-									"name": "variable.parameter.ghost"
-								}
-							]
-						}
-					}
-				},
-				{
-					"match": "\\b(class)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s*(<)\\s*([A-Za-z_][A-Za-z0-9_]*))?\\b",
-					"captures": {
-						"1": {
-							"name": "storage.type.class.ghost"
-						},
-						"2": {
-							"name": "entity.name.type.class.ghost"
-						},
-						"3": {
-							"name": "storage.modifer.ghost"
-						},
-						"4": {
-							"name": "entity.name.type.class.ghost"
-						}
-					}
-				}
-			]
-		},
-		"callables": {
-			"patterns": [
-				{
-					"match": "([A-Za-z_][A-Za-z0-9_]*)",
-					"name": "support.function.ghost"
-				}
-			]
-		},
-		"strings": {
-			"name": "string.quoted.double.ghost",
-			"begin": "\"",
-			"end": "\"",
-			"patterns": []
-		},
-		"digits": {
-			"patterns": [
-				{
 					"name": "constant.numeric.ghost",
 					"match": "\\b[0-9]+(?:.[0-9]+)?\\b"
-				}
-			]
-		},
-		"ident": {
-			"patterns": [
-				{
-					"name": "variable.other.readwrite.ghost",
-					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
 				}
 			]
 		},
 		"comments": {
 			"patterns": [
 				{
-					"name": "comment.line.double-slash.ghost",
+					"name": "comment",
 					"match": "//.*"
+				}
+			]
+		},
+		"functions": {
+			"patterns": [
+				{
+					"name": "support.function.ghost",
+					"match": "\\b(exit|first|identifiers|input|last|length|number|print|push|random|sleep|string|tail|type)\\b"
+				}
+			]
+		},
+		"double_quote_strings": {
+			"name": "string.quoted.double.ghost",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.ghost",
+					"match": "\\\\."
+				}
+			]
+		},
+		"single_quote_strings": {
+			"name": "string.quoted.single.ghost",
+			"begin": "'",
+			"end": "'",
+			"patterns": [
+				{
+					"name": "constant.character.escape.ghost",
+					"match": "\\\\."
 				}
 			]
 		}
 	},
-
 	"scopeName": "source.ghost"
 }
