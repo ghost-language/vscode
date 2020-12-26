@@ -15,7 +15,7 @@
 			"patterns": [
 				{
 					"name": "keyword.function.ghost",
-					"match": "\\b(functions)\\b"
+					"match": "\\b(function)\\b"
 				},
 				{
 					"name": "keyword.control.ghost",
@@ -48,6 +48,10 @@
 				{
 					"name": "keyword.operator.ellipsis.ghost",
 					"match": "(\\.\\.|\\.\\.\\.)"
+				},
+				{
+					"name": "keyboard.control.class.ghost",
+					"match": "\\b(class|new|this)\\b"
 				}
 			]
 		},
@@ -146,6 +150,29 @@
 					"comment": "decrement",
 					"match": "(?>\\w+)(?=\\-\\-)",
 					"name": "variable.other.ghost"
+				}
+			]
+		},
+		"entity": {
+			"patterns": [
+				{
+					"match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(([A-Za-z0-9,\\s]*)\\)",
+					"captures": {
+						"1": {
+							"name": "storage.type.function.ghost"
+						},
+						"2": {
+							"name": "entity.name.function.ghost"
+						},
+						"3": {
+							"patterns": [
+								{
+									"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+									"name": "variable.parameter.ghost"
+								}
+							]
+						}
+					}
 				}
 			]
 		}
