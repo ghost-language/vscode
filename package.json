@@ -4,7 +4,7 @@
     "icon": "icon.png",
     "description": "Ghost extension for Visual Studio Code.",
     "publisher": "ghost-language",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "license": "MIT",
     "keywords": ["ghost"],
     "private": true,
