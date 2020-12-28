@@ -50,8 +50,8 @@
 					"match": "(\\.\\.|\\.\\.\\.)"
 				},
 				{
-					"name": "keyboard.control.class.ghost",
-					"match": "\\b(class|new|this)\\b"
+					"name": "keyword.control.class.ghost",
+					"match": "(class|new|this)"
 				}
 			]
 		},

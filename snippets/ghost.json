@@ -37,13 +37,13 @@
     },
     "print": {
         "prefix": "print",
-        "body": "print($1);",
+        "body": "print($1)",
         "description": "Print a string or object with a trailing newline.",
         "scope": "source.ghost"
     },
     "write": {
         "prefix": "write",
-        "body": "write($1);",
+        "body": "write($1)",
         "description": "Print a string or object without a trailing newline.",
         "scope": "source.ghost"
     }
