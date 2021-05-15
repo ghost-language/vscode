@@ -1,10 +1,10 @@
 {
-    "name": "ghost-lang",
-    "displayName": "Ghost Lang",
+    "name": "ghost-language",
+    "displayName": "Ghost Language",
     "icon": "icon.png",
     "description": "Ghost extension for Visual Studio Code.",
     "publisher": "GhostLanguage",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "license": "MIT",
     "keywords": ["ghost"],
     "private": true,
