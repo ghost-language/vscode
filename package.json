@@ -3,7 +3,7 @@
     "displayName": "Ghost Lang",
     "icon": "icon.png",
     "description": "Ghost extension for Visual Studio Code.",
-    "publisher": "ghost-language",
+    "publisher": "GhostLanguage",
     "version": "0.0.6",
     "license": "MIT",
     "keywords": ["ghost"],
