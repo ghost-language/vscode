@@ -1,17 +1,82 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Ghost",
+	"scopeName": "source.ghost",
+	"fileTypes": ["ghost"],
+
 	"patterns": [
-		{ "include": "#keywords" },
-		{ "include": "#strings" },
-		{ "include": "#comments" },
-		{ "include": "#functions" },
-		{ "include": "#constants" },
-		{ "include": "#puncuation" },
-		{ "include": "#variable" }
+		{ "include": "#code" }
 	],
+
 	"repository": {
-		"keywords": {
+		"code": {
+			"patterns": [
+				{ "include": "block" },
+				{ "include": "#blockComment" },
+				{ "include": "#comment" },
+				{ "include": "#constant" },
+				{ "include": "function" },
+				{ "include": "#keyword" },
+				{ "include": "#library" },
+				{ "include": "#puncuation" },
+				{ "include": "#string" }
+			]
+		},
+
+		"block": {
+			"begin": "{",
+			"beginCaptures": {
+				"0": {
+					"name": "puncuation.section.block.begin.ghost"
+				}
+			},
+			"end": "}",
+			"endCaptures": {
+				"0": {
+					"name": "puncuation.section.block.end.ghost"
+				}
+			},
+			"name": "meta.block.ghost",
+			"patterns": [
+				{ "include": "#code" }
+			]
+		},
+
+		"blockComment": {
+			"name": "comment.block.ghost",
+			"begin": "/\\*",
+			"end": "\\*/",
+			"patterns": [
+				{ "include": "#blockComment" }
+			]
+		},
+
+		"comment": {
+			"name": "comment.line.ghost",
+			"match": "//.*"
+		},
+
+		"constant": {
+			"patterns": [
+				{
+					"name": "constant.language.null.ghost",
+					"match": "\\b(null)\\b"
+				},
+				{
+					"name": "constant.language.boolean.ghost",
+					"match": "\\b(true|false)\\b"
+				},
+				{
+					"name": "constant.numeric.ghost",
+					"match": "\\b(0x[0-9a-fA-F]*|[0-9]+(\\.?[0-9]*)?(e(\\+|-)?[0-9]+)?)\\b"
+				},
+				{
+					"name": "constant.numeric.hexadecimal.ghost",
+					"match": "0x[A-Fa-f0-9]+"
+				}
+			]
+		},
+
+		"keyword": {
 			"patterns": [
 				{
 					"name": "keyword.function.ghost",
@@ -19,11 +84,15 @@
 				},
 				{
 					"name": "keyword.control.ghost",
-					"match": "\\b(if|else|return|while|for|in)\\b"
+					"match": "\\b(?:break|else|for|if|import|in|return|while)\\b"
 				},
 				{
 					"name": "keyword.operator.logical.ghost",
-					"match": "\\b(and|or)\\b"
+					"match": "\\b(!|and|or)\\b"
+				},
+				{
+					"name": "keyword.operator.range.ghost",
+					"match": "(\\.\\.)"
 				},
 				{
 					"name": "keyword.operator.arithmetic.ghost",
@@ -35,94 +104,28 @@
 				},
 				{
 					"name": "keyword.operator.assignment.ghost",
-					"match": "(:=|=|\\+=|\\-=|\\*=|/=|%=)"
-				},
-				{
-					"name": "keyword.operator.decrement.ghost",
-					"match": "\\-\\-"
-				},
-				{
-					"name": "keyword.operator.increment.ghost",
-					"match": "\\+\\+"
-				},
-				{
-					"name": "keyword.operator.ellipsis.ghost",
-					"match": "(\\.\\.|\\.\\.\\.)"
-				},
-				{
-					"name": "keyword.control.class.ghost",
-					"match": "(class|new|this)"
+					"match": "(:=)"
 				}
 			]
 		},
-		"constants": {
-			"patterns": [
-				{
-					"name": "constant.language.null.ghost",
-					"match": "\\b(null)\\b"
-				},
-				{
-					"name": "constant.language.boolean.ghost",
-					"match": "\\b(true|false)\\b"
-				},
-				{
-					"name": "constant.numeric.floating-point.ghost",
-					"match": "(\\.\\d+([Ee][-+]\\d+)?i?)\\b|\\b\\d+\\.\\d*(([Ee][-+]\\d+)?i?\\b)?"
-				},
-				{
-					"name": "constant.numeric.integer.ghost",
-					"match": "\\b((0x[0-9a-fA-F]+)|(0[0-7]+i?)|(\\d+([Ee]\\d+)?i?)|(\\d+[Ee][-+]\\d+i?))\\b"
-				}
-			]
-		},
-		"comments": {
-			"patterns": [
-				{
-					"name": "comment.line.ghost",
-					"begin": "//",
-					"end": "\n"
-				},
-				{
-					"name": "comment.block.ghost",
-					"begin": "\/[*]",
-					"end": "[*](\/)"
-				}
-			]
-		},
-		"functions": {
+
+		"library": {
 			"patterns": [
 				{
 					"name": "support.function.ghost",
-					"match": "\\b(exit|first|identifiers|input|last|length|number|print|push|random|sleep|string|tail|type)\\b"
+					"match": "\\b(exit|identifiers|input|number|print|sleep|string|tail|type|write|file.read|file.write|ghost.version|math.abs|math.cos|math.pi|math.random|math.round|os.args)\\b"
 				}
 			]
 		},
-		"strings": {
+
+		"puncutation": {
 			"patterns": [
 				{
-					"name": "string.quoted.single.ghost",
-					"begin": "'",
-					"end": "'"
-				},
-				{
-					"name": "string.quoted.double.ghost",
-					"begin": "\"",
-					"end": "\""
-				}
-			]
-		},
-		"punctuation": {
-			"patterns": [
-				{
-					"name": "punctuation.terminator.ghost",
-					"match": ";"
-				},
-				{
-					"name": "punctuation.other.comma.ghost",
+					"name": "puncuation.other.comma.ghost",
 					"match": ","
 				},
 				{
-					"name": "punctuation.other.period.ghost",
+					"name": "puncuation.other.period.ghost",
 					"match": "\\.(?!\\.)"
 				},
 				{
@@ -131,51 +134,49 @@
 				}
 			]
 		},
+
+		"string": {
+			"patterns": [
+				{
+					"name": "string.quoted.double.ghost",
+					"begin": "\"",
+					"end": "\"",
+					"patterns": [
+						{ "include": "#stringEscapes" }
+					]
+				},
+				{
+					"name": "string.quoted.single.ghost",
+					"begin": "'",
+					"end": "'"
+				}
+			]
+		},
+
+		"stringEscapes": {
+			"patterns": [
+				{
+					"name": "constant.character.escape.ghost",
+					"match": "\\\\(?:[0\"\\abfnrtv]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{4})"
+				},
+				{
+					"name": "invalid.illegal.unknown-escape.ghost",
+					"match": "\\\\(?:x[0-9A-Fa-f]{0,1}|u[0-9A-Fa-f]{0,3}|U[0-9A-Fa-f]{0,7}|.)"
+				},
+				{
+					"name": "constant.character.interpolation.ghost",
+					"match": "%\\((.*?)\\)"
+				}
+			]
+		},
+
 		"variable": {
 			"patterns": [
 				{
 					"name": "variable.other.readwrite.ghost",
 					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
-				},
-				{
-					"match": "\\w+(?=\\s\\:\\=)",
-					"name": "variable.other.assignment.ghost"
-				},
-				{
-					"comment": "increment",
-					"match": "(?>\\w+)(?=\\+\\+)",
-					"name": "variable.other.ghost"
-				},
-				{
-					"comment": "decrement",
-					"match": "(?>\\w+)(?=\\-\\-)",
-					"name": "variable.other.ghost"
-				}
-			]
-		},
-		"entity": {
-			"patterns": [
-				{
-					"match": "\\b(function)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\(([A-Za-z0-9,\\s]*)\\)",
-					"captures": {
-						"1": {
-							"name": "storage.type.function.ghost"
-						},
-						"2": {
-							"name": "entity.name.function.ghost"
-						},
-						"3": {
-							"patterns": [
-								{
-									"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
-									"name": "variable.parameter.ghost"
-								}
-							]
-						}
-					}
 				}
 			]
 		}
-	},
-	"scopeName": "source.ghost"
+	}
 }

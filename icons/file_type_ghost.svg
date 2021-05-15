@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="260px" height="229px" viewBox="0 0 260 229" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>Triangle</title>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Ghost-Logo-Typeface-Copy-2" transform="translate(-161.000000, -149.000000)" fill="#6366F1" fill-rule="nonzero">
+            <g id="Group" transform="translate(161.045977, 149.885274)">
+                <path d="M137.482191,2.02839689 C139.740527,3.33878974 141.617707,5.21596928 142.9281,7.47430588 L257.882122,205.586558 C262.039815,212.751943 259.601598,221.931111 252.436213,226.088803 C250.14924,227.415812 247.552133,228.114726 244.908045,228.114726 L15,228.114726 C6.71572875,228.114726 0,221.398997 0,213.114726 C0,210.470638 0.698913614,207.873531 2.0259227,205.586558 L116.979945,7.47430588 C121.137638,0.308920845 130.316806,-2.12929566 137.482191,2.02839689 Z" id="Triangle"></path>
+            </g>
+        </g>
+    </g>
+</svg>
