@@ -10,15 +10,16 @@
 	"repository": {
 		"code": {
 			"patterns": [
-				{ "include": "block" },
+				{ "include": "#block" },
 				{ "include": "#blockComment" },
+				{ "include": "#class" },
 				{ "include": "#comment" },
 				{ "include": "#constant" },
-				{ "include": "function" },
 				{ "include": "#keyword" },
 				{ "include": "#library" },
 				{ "include": "#puncuation" },
-				{ "include": "#string" }
+				{ "include": "#string" },
+				{ "include": "#variable" }
 			]
 		},
 
@@ -47,6 +48,37 @@
 			"end": "\\*/",
 			"patterns": [
 				{ "include": "#blockComment" }
+			]
+		},
+
+		"class": {
+			"name": "meta.class",
+			"begin": "(?:\\b(foreign)\\s+)?(\\bclass)\\s+(\\w+)\\s+(?:(\\bis)\\s+(\\w+))?",
+            "beginCaptures": {
+                "1": { "name": "storage.modifier.ghost" },
+                "2": { "name": "storage.modifier.ghost" },
+                "3": { "name": "entity.name.class.ghost" },
+                "4": { "name": "storage.modifier.ghost" },
+                "5": { "name": "entity.name.class.ghost" }
+            },
+			"end": "}",
+            "endCaptures": {
+                "0": { "name": "punctuation.section.class.end.ghost" }
+            },
+			"patterns": [
+				{
+					"name": "meta.class.body.ghost",
+					"begin": "{",
+					"beginCaptures": {
+                        "0": { "name": "punctuation.section.class.begin.ghost" }
+                    },
+					"patterns": [
+						{ "include": "#comment" },
+						{ "include": "#blockComment" },
+						{ "include": "#method" }
+					],
+					"end": "(?=})"
+				}
 			]
 		},
 
@@ -114,6 +146,37 @@
 				{
 					"name": "support.function.ghost",
 					"match": "\\b(exit|identifiers|input|number|print|sleep|string|tail|type|write|file.read|file.write|ghost.version|math.abs|math.cos|math.pi|math.random|math.round|os.args)\\b"
+				}
+			]
+		},
+
+		"method": {
+			"name": "meta.method.ghost",
+			"begin": "(?:\\b(construct|static)\\s+)?(\\w+=|\\w+|\\+|-|\\*|\\/|%|<=?|>=?|==|!=?|&|\\||~)",
+			"beginCaptures": {
+                "1": { "name": "storage.modifier.ghost" },
+                "2": { "name": "entity.name.function.ghost" }
+            },
+			"end": "}",
+			"patterns": [
+				{
+                    "name": "meta.method.identifier.ghost",
+                    "begin": "\\(",
+                    "end": "\\)",
+                    "patterns": [
+                        {
+                            "name": "variable.parameter.function.ghost",
+                            "match": "\\w+"
+                        }
+                    ]
+                },
+				{
+					"name": "meta.method.body.ghost",
+					"begin": "{",
+					"end": "(?=})",
+					"patterns": [
+						{ "include": "#code" }
+					]
 				}
 			]
 		},
