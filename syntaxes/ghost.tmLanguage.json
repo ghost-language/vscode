@@ -10,17 +10,24 @@
 	"repository": {
 		"code": {
 			"patterns": [
+				{ "include": "#assignment" },
 				{ "include": "#block" },
 				{ "include": "#blockComment" },
 				{ "include": "#class" },
 				{ "include": "#comment" },
 				{ "include": "#constant" },
+				{ "include": "#function" },
 				{ "include": "#keyword" },
 				{ "include": "#library" },
 				{ "include": "#puncuation" },
 				{ "include": "#string" },
 				{ "include": "#variable" }
 			]
+		},
+
+		"assignment": {
+			"name": "keyword.operator.assignment.ghost",
+			"match": "(=)"
 		},
 
 		"block": {
@@ -75,7 +82,7 @@
 					"patterns": [
 						{ "include": "#comment" },
 						{ "include": "#blockComment" },
-						{ "include": "#method" }
+						{ "include": "#function" }
 					],
 					"end": "(?=})"
 				}
@@ -108,15 +115,39 @@
 			]
 		},
 
+		"function": {
+			"patterns": [
+				{
+					"name": "keyword.control.ghost",
+					"match": "\\b(?:function)\\b"
+				},
+				{
+					"name": "meta.function.ghost",
+					"match": "(?:[.]|\\b)(\\w+)\\(",
+					"captures": {
+						"1": { "name": "entity.name.function.ghost" }
+					}
+				},
+				{
+					"begin": "^(\\bfunction\\b)\\s(\\w+)",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.function.ghost"
+						},
+						"2": {
+							"name": "entity.name.function.ghost"
+						}
+					},
+					"end": "\\{"
+				}
+			]
+		},
+
 		"keyword": {
 			"patterns": [
 				{
-					"name": "keyword.function.ghost",
-					"match": "\\b(function)\\b"
-				},
-				{
 					"name": "keyword.control.ghost",
-					"match": "\\b(?:break|else|for|if|import|in|return|while)\\b"
+					"match": "\\b(?:break|continue|else|for|if|import|in|return|while)\\b"
 				},
 				{
 					"name": "keyword.operator.logical.ghost",
@@ -136,7 +167,7 @@
 				},
 				{
 					"name": "keyword.operator.assignment.ghost",
-					"match": "(:=)"
+					"match": "(=)"
 				}
 			]
 		},
@@ -145,14 +176,14 @@
 			"patterns": [
 				{
 					"name": "support.function.ghost",
-					"match": "\\b(exit|identifiers|input|number|print|sleep|string|tail|type|write|file.read|file.write|ghost.version|math.abs|math.cos|math.pi|math.random|math.round|os.args)\\b"
+					"match": "\\b(print)\\b"
 				}
 			]
 		},
 
 		"method": {
 			"name": "meta.method.ghost",
-			"begin": "(?:\\b(construct|static)\\s+)?(\\w+=|\\w+|\\+|-|\\*|\\/|%|<=?|>=?|==|!=?|&|\\||~)",
+			"begin": "(?:\\b(static)\\s+)?(\\w+=|\\w+|\\+|-|\\*|\\/|%|<=?|>=?|==|!=?|&|\\||~)",
 			"beginCaptures": {
                 "1": { "name": "storage.modifier.ghost" },
                 "2": { "name": "entity.name.function.ghost" }
@@ -236,8 +267,8 @@
 		"variable": {
 			"patterns": [
 				{
-					"name": "variable.other.readwrite.ghost",
-					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+					"name": "variable.language.ghost",
+					"match": "\\b(this|super)\\b"
 				}
 			]
 		}

@@ -4,7 +4,7 @@
     "icon": "icon.png",
     "description": "Ghost extension for Visual Studio Code.",
     "publisher": "GhostLanguage",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "license": "MIT",
     "keywords": ["ghost"],
     "private": true,
@@ -33,7 +33,11 @@
             "id": "ghost",
             "aliases": ["Ghost", "ghost"],
             "extensions": [".ghost"],
-            "configuration": "./ghost.configuration.json"
+            "configuration": "./ghost.configuration.json",
+            "icons": {
+                "light": "./icons/ghost-light.svg",
+                "dark": "./icons/ghost-dark.svg"
+            }
         }],
         "grammars": [{
             "language": "ghost",
