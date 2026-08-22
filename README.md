@@ -105,6 +105,43 @@ Layout:
 When Ghost or Lumen gains a module or method, `src/api/ghost.js` and `src/api/lumen.js` are the files
 to edit; everything else reads from them.
 
+## Releasing
+
+A tag is the whole release. Pushing one runs the tests, packages the extension, publishes it, and
+cuts the GitHub release carrying the same `.vsix` and the notes already written in the changelog:
+
+```bash
+# Add a "## [0.2.0] - YYYY-MM-DD" section to CHANGELOG.md first.
+npm version minor
+git push --follow-tags
+```
+
+`npm version` bumps `package.json`, commits, and tags in one step. The workflow refuses to run if the
+tag and the manifest disagree, because the Marketplace treats a version as immutable once taken —
+publishing the wrong one under the right name cannot be undone.
+
+A version with a hyphen (`0.2.0-beta.1`) is released as a pre-release to both the Marketplace and
+GitHub.
+
+### Tokens
+
+Both are optional. With neither configured a tag still produces a GitHub release with an installable
+`.vsix` attached, which is enough to hand the extension to someone.
+
+| Secret | For | |
+| --- | --- | --- |
+| `VSCE_PAT` | Visual Studio Marketplace | An Azure DevOps token, scoped **Marketplace → Manage** and **all accessible organizations**. Scoping it to one organization produces a token that fails to authenticate. |
+| `OVSX_PAT` | [Open VSX](https://open-vsx.org) | What VSCodium, Cursor and the other non-Microsoft builds install from; they cannot reach the Marketplace. |
+
+### By hand
+
+To build a `.vsix` without tagging anything:
+
+```bash
+npx @vscode/vsce package
+code --install-extension ghost-language-*.vsix
+```
+
 ## Resources
 
 - https://code.visualstudio.com/api/language-extensions/syntax-highlight-guide

@@ -1,0 +1,46 @@
+name: Test
+
+on:
+  push:
+    branches: [nightly]
+  pull_request:
+
+jobs:
+  test:
+    name: Test on Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # The extension has no dependencies, so there is nothing to install.
+      - run: npm test
+
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Packaging on every change catches a manifest that has drifted from the
+      # files it points at — a broken path or a missing contribution fails here
+      # rather than at the moment someone is trying to cut a release.
+      - name: Check the extension packages
+        run: npx --yes @vscode/vsce package --out /tmp/ghost-language.vsix
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: /tmp/ghost-language.vsix
+          retention-days: 14
