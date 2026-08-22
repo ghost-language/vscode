@@ -26,9 +26,6 @@
         "Programming Languages"
     ],
     "main": "./src/extension.js",
-    "activationEvents": [
-        "onLanguage:ghost"
-    ],
     "scripts": {
         "test": "node test/run.js"
     },
