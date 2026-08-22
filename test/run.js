@@ -218,7 +218,7 @@ console.log('\n== grammar and configuration ==');
   const root = path.join(__dirname, '..');
   const read = (f) => JSON.parse(fs.readFileSync(path.join(root, f), 'utf8'));
 
-  for (const f of ['package.json', 'ghost.configuration.json', 'syntaxes/ghost.tmLanguage.json', 'snippets/ghost.json']) {
+  for (const f of ['package.json', 'ghost.configuration.json', 'syntaxes/ghost.tmLanguage.json']) {
     let ok = true;
     try { read(f); } catch (e) { ok = false; }
     check(f + ' is valid JSON', ok);
@@ -291,7 +291,6 @@ console.log('\n== grammar and configuration ==');
   check('entry point exists', fs.existsSync(path.join(root, pkg.main)));
   check('grammar path exists', fs.existsSync(path.join(root, pkg.contributes.grammars[0].path)));
   check('language configuration path exists', fs.existsSync(path.join(root, pkg.contributes.languages[0].configuration)));
-  check('snippets path exists', fs.existsSync(path.join(root, pkg.contributes.snippets[0].path)));
   for (const icon of Object.values(pkg.contributes.languages[0].icons)) {
     check('icon exists: ' + icon, fs.existsSync(path.join(root, icon)));
   }

@@ -45,6 +45,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Minimum Visual Studio Code version is now `1.75`, which the language icons and semantic tokens
   need. The manifest previously declared `1.44`.
 
+### Removed
+- The snippets. Completion now covers what they did and stays correct as the language moves, whereas
+  these had drifted: `write` expanded to a call to a function Ghost does not have — only `print` and
+  `type` are registered as globals — and the `while` snippet's description was misspelt, so it never
+  showed.
+
 ## [0.0.8] - 2021-09-08
 ### Added
 - Class and method highlighting support

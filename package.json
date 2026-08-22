@@ -24,8 +24,7 @@
         "vscode": "^1.75.0"
     },
     "categories": [
-        "Programming Languages",
-        "Snippets"
+        "Programming Languages"
     ],
     "main": "./src/extension.js",
     "activationEvents": [
@@ -53,12 +52,6 @@
                 }
             }
         },
-        "snippets": [
-            {
-                "language": "ghost",
-                "path": "./snippets/ghost.json"
-            }
-        ],
         "languages": [
             {
                 "id": "ghost",
