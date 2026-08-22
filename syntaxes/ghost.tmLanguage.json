@@ -1,4 +1,5 @@
 {
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "Ghost",
 	"scopeName": "source.ghost",
 	"fileTypes": ["ghost"],
@@ -10,91 +11,298 @@
 	"repository": {
 		"code": {
 			"patterns": [
-				{ "include": "#assignment" },
-				{ "include": "#block" },
-				{ "include": "#blockComment" },
+				{ "include": "#comments" },
+				{ "include": "#strings" },
+				{ "include": "#import" },
 				{ "include": "#class" },
-				{ "include": "#comment" },
-				{ "include": "#constant" },
-				{ "include": "#function" },
-				{ "include": "#keyword" },
+				{ "include": "#trait" },
+				{ "include": "#use" },
+				{ "include": "#function-declaration" },
+				{ "include": "#method-declaration" },
+				{ "include": "#switch" },
+				{ "include": "#keywords" },
+				{ "include": "#constants" },
+				{ "include": "#numbers" },
+				{ "include": "#new" },
 				{ "include": "#library" },
-				{ "include": "#puncuation" },
-				{ "include": "#string" },
-				{ "include": "#variable" }
+				{ "include": "#function-call" },
+				{ "include": "#property-access" },
+				{ "include": "#operators" },
+				{ "include": "#punctuation" },
+				{ "include": "#identifier" }
 			]
 		},
 
-		"assignment": {
-			"name": "keyword.operator.assignment.ghost",
-			"match": "(=)"
-		},
-
-		"block": {
-			"begin": "{",
-			"beginCaptures": {
-				"0": {
-					"name": "puncuation.section.block.begin.ghost"
-				}
-			},
-			"end": "}",
-			"endCaptures": {
-				"0": {
-					"name": "puncuation.section.block.end.ghost"
-				}
-			},
-			"name": "meta.block.ghost",
+		"comments": {
 			"patterns": [
-				{ "include": "#code" }
+				{
+					"name": "comment.block.ghost",
+					"begin": "/\\*",
+					"beginCaptures": {
+						"0": { "name": "punctuation.definition.comment.begin.ghost" }
+					},
+					"end": "\\*/",
+					"endCaptures": {
+						"0": { "name": "punctuation.definition.comment.end.ghost" }
+					}
+				},
+				{
+					"name": "comment.line.double-slash.ghost",
+					"begin": "//",
+					"beginCaptures": {
+						"0": { "name": "punctuation.definition.comment.ghost" }
+					},
+					"end": "$"
+				},
+				{
+					"name": "comment.line.number-sign.ghost",
+					"begin": "#",
+					"beginCaptures": {
+						"0": { "name": "punctuation.definition.comment.ghost" }
+					},
+					"end": "$"
+				}
 			]
 		},
 
-		"blockComment": {
-			"name": "comment.block.ghost",
-			"begin": "/\\*",
-			"end": "\\*/",
+		"strings": {
 			"patterns": [
-				{ "include": "#blockComment" }
+				{
+					"name": "string.quoted.double.ghost",
+					"begin": "\"",
+					"beginCaptures": {
+						"0": { "name": "punctuation.definition.string.begin.ghost" }
+					},
+					"end": "\"",
+					"endCaptures": {
+						"0": { "name": "punctuation.definition.string.end.ghost" }
+					},
+					"patterns": [
+						{ "include": "#string-escapes" }
+					]
+				},
+				{
+					"name": "string.quoted.single.ghost",
+					"begin": "'",
+					"beginCaptures": {
+						"0": { "name": "punctuation.definition.string.begin.ghost" }
+					},
+					"end": "'",
+					"endCaptures": {
+						"0": { "name": "punctuation.definition.string.end.ghost" }
+					},
+					"patterns": [
+						{ "include": "#string-escapes" }
+					]
+				}
+			]
+		},
+
+		"string-escapes": {
+			"patterns": [
+				{
+					"comment": "The scanner recognises exactly these escapes; anything else is kept verbatim, backslash included.",
+					"name": "constant.character.escape.ghost",
+					"match": "\\\\[nrt\\\\\"']"
+				},
+				{
+					"name": "constant.character.format.placeholder.ghost",
+					"match": "%[sdvqxXtbcofeEgGp%]"
+				}
+			]
+		},
+
+		"import": {
+			"patterns": [
+				{
+					"comment": "import Name, Other as Alias from \"path\"",
+					"begin": "\\b(import)\\b",
+					"beginCaptures": {
+						"1": { "name": "keyword.control.import.ghost" }
+					},
+					"end": "(?<=[\"'])|$",
+					"patterns": [
+						{ "include": "#comments" },
+						{ "include": "#strings" },
+						{
+							"name": "keyword.control.import.ghost",
+							"match": "\\b(from|as)\\b"
+						},
+						{
+							"name": "variable.language.wildcard.ghost",
+							"match": "\\*"
+						},
+						{
+							"name": "entity.name.type.imported.ghost",
+							"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+						},
+						{ "include": "#punctuation" }
+					]
+				}
 			]
 		},
 
 		"class": {
-			"name": "meta.class",
-			"begin": "(?:\\b(foreign)\\s+)?(\\bclass)\\s+(\\w+)\\s+(?:(\\bis)\\s+(\\w+))?",
-            "beginCaptures": {
-                "1": { "name": "storage.modifier.ghost" },
-                "2": { "name": "storage.modifier.ghost" },
-                "3": { "name": "entity.name.class.ghost" },
-                "4": { "name": "storage.modifier.ghost" },
-                "5": { "name": "entity.name.class.ghost" }
-            },
-			"end": "}",
-            "endCaptures": {
-                "0": { "name": "punctuation.section.class.end.ghost" }
-            },
+			"comment": "class Name extends Super {",
+			"match": "\\b(class)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s+(extends)\\s+([A-Za-z_][A-Za-z0-9_]*))?",
+			"captures": {
+				"1": { "name": "storage.type.class.ghost" },
+				"2": { "name": "entity.name.type.class.ghost" },
+				"3": { "name": "storage.modifier.extends.ghost" },
+				"4": { "name": "entity.other.inherited-class.ghost" }
+			}
+		},
+
+		"trait": {
+			"match": "\\b(trait)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+			"captures": {
+				"1": { "name": "storage.type.trait.ghost" },
+				"2": { "name": "entity.name.type.trait.ghost" }
+			}
+		},
+
+		"use": {
+			"comment": "use TraitOne, TraitTwo",
+			"begin": "\\b(use)\\b",
+			"beginCaptures": {
+				"1": { "name": "keyword.control.use.ghost" }
+			},
+			"end": "$|(?=[^\\s,A-Za-z0-9_])",
 			"patterns": [
 				{
-					"name": "meta.class.body.ghost",
-					"begin": "{",
-					"beginCaptures": {
-                        "0": { "name": "punctuation.section.class.begin.ghost" }
-                    },
-					"patterns": [
-						{ "include": "#comment" },
-						{ "include": "#blockComment" },
-						{ "include": "#function" }
-					],
-					"end": "(?=})"
+					"name": "entity.name.type.trait.ghost",
+					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+				},
+				{
+					"name": "punctuation.separator.comma.ghost",
+					"match": ","
 				}
 			]
 		},
 
-		"comment": {
-			"name": "comment.line.ghost",
-			"match": "//.*"
+		"new": {
+			"match": "\\b(new)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+			"captures": {
+				"1": { "name": "keyword.operator.new.ghost" },
+				"2": { "name": "entity.name.type.class.ghost" }
+			}
 		},
 
-		"constant": {
+		"function-declaration": {
+			"comment": "function name(a, b = 1) — the name is optional, giving anonymous functions.",
+			"begin": "\\b(function)\\b(?:\\s+([A-Za-z_][A-Za-z0-9_]*))?\\s*(?=\\()",
+			"beginCaptures": {
+				"1": { "name": "storage.type.function.ghost" },
+				"2": { "name": "entity.name.function.ghost" }
+			},
+			"end": "(?<=\\))",
+			"patterns": [
+				{ "include": "#parameters" }
+			]
+		},
+
+		"method-declaration": {
+			"comment": "Shorthand method in a class or trait body: name(a, b) {. The lookahead rules out control-flow statements, which share the shape.",
+			"begin": "^\\s*(?!(?:if|else|for|while|switch|case|default|function|class|trait|return|import|from|as|use|new|in|and|or|break|continue|print|type)\\b)([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\([^()]*\\)\\s*\\{)",
+			"beginCaptures": {
+				"1": { "name": "entity.name.function.method.ghost" }
+			},
+			"end": "(?<=\\))",
+			"patterns": [
+				{ "include": "#parameters" }
+			]
+		},
+
+		"parameters": {
+			"begin": "\\(",
+			"beginCaptures": {
+				"0": { "name": "punctuation.definition.parameters.begin.ghost" }
+			},
+			"end": "\\)",
+			"endCaptures": {
+				"0": { "name": "punctuation.definition.parameters.end.ghost" }
+			},
+			"patterns": [
+				{ "include": "#comments" },
+				{
+					"comment": "A parameter with a default value.",
+					"match": "([A-Za-z_][A-Za-z0-9_]*)\\s*(=)",
+					"captures": {
+						"1": { "name": "variable.parameter.ghost" },
+						"2": { "name": "keyword.operator.assignment.ghost" }
+					}
+				},
+				{ "include": "#strings" },
+				{ "include": "#constants" },
+				{ "include": "#numbers" },
+				{
+					"name": "variable.parameter.ghost",
+					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+				},
+				{ "include": "#operators" },
+				{ "include": "#punctuation" }
+			]
+		},
+
+		"switch": {
+			"patterns": [
+				{
+					"name": "keyword.control.switch.ghost",
+					"match": "\\b(switch)\\b"
+				},
+				{
+					"name": "keyword.control.case.ghost",
+					"match": "\\b(case|default)\\b"
+				}
+			]
+		},
+
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.conditional.ghost",
+					"match": "\\b(if|else)\\b"
+				},
+				{
+					"name": "keyword.control.loop.ghost",
+					"match": "\\b(for|while|in)\\b"
+				},
+				{
+					"name": "keyword.control.flow.ghost",
+					"match": "\\b(break|continue|return)\\b"
+				},
+				{
+					"name": "variable.language.this.ghost",
+					"match": "\\b(this)\\b"
+				},
+				{
+					"name": "variable.language.super.ghost",
+					"match": "\\b(super)\\b"
+				},
+				{
+					"name": "storage.type.function.ghost",
+					"match": "\\b(function)\\b"
+				},
+				{
+					"name": "storage.type.class.ghost",
+					"match": "\\b(class|trait)\\b"
+				},
+				{
+					"name": "storage.modifier.extends.ghost",
+					"match": "\\b(extends)\\b"
+				},
+				{
+					"name": "keyword.control.import.ghost",
+					"match": "\\b(import|from|as|use)\\b"
+				},
+				{
+					"name": "keyword.operator.new.ghost",
+					"match": "\\b(new)\\b"
+				}
+			]
+		},
+
+		"constants": {
 			"patterns": [
 				{
 					"name": "constant.language.null.ghost",
@@ -103,71 +311,16 @@
 				{
 					"name": "constant.language.boolean.ghost",
 					"match": "\\b(true|false)\\b"
-				},
-				{
-					"name": "constant.numeric.ghost",
-					"match": "\\b(0x[0-9a-fA-F]*|[0-9]+(\\.?[0-9]*)?(e(\\+|-)?[0-9]+)?)\\b"
-				},
-				{
-					"name": "constant.numeric.hexadecimal.ghost",
-					"match": "0x[A-Fa-f0-9]+"
 				}
 			]
 		},
 
-		"function": {
+		"numbers": {
+			"comment": "The scanner reads digits, an optional fractional part, and an optional exponent. There are no hex, octal, or binary literals.",
 			"patterns": [
 				{
-					"name": "keyword.control.ghost",
-					"match": "\\b(?:function)\\b"
-				},
-				{
-					"name": "meta.function.ghost",
-					"match": "(?:[.]|\\b)(\\w+)\\(",
-					"captures": {
-						"1": { "name": "entity.name.function.ghost" }
-					}
-				},
-				{
-					"begin": "^(\\bfunction\\b)\\s(\\w+)",
-					"beginCaptures": {
-						"1": {
-							"name": "keyword.function.ghost"
-						},
-						"2": {
-							"name": "entity.name.function.ghost"
-						}
-					},
-					"end": "\\{"
-				}
-			]
-		},
-
-		"keyword": {
-			"patterns": [
-				{
-					"name": "keyword.control.ghost",
-					"match": "\\b(?:break|continue|else|for|if|import|in|return|while)\\b"
-				},
-				{
-					"name": "keyword.operator.logical.ghost",
-					"match": "\\b(!|and|or)\\b"
-				},
-				{
-					"name": "keyword.operator.range.ghost",
-					"match": "(\\.\\.)"
-				},
-				{
-					"name": "keyword.operator.arithmetic.ghost",
-					"match": "(\\-|\\+|\\*|\/|%)"
-				},
-				{
-					"name": "keyword.operator.comparison.ghost",
-					"match": "(==|!=|<=|>=|<|>)"
-				},
-				{
-					"name": "keyword.operator.assignment.ghost",
-					"match": "(=)"
+					"name": "constant.numeric.decimal.ghost",
+					"match": "\\b[0-9]+(\\.[0-9]+)?([eE]-?[0-9]+)?\\b"
 				}
 			]
 		},
@@ -175,100 +328,128 @@
 		"library": {
 			"patterns": [
 				{
-					"name": "support.function.ghost",
-					"match": "\\b(print)\\b"
+					"comment": "Global functions registered by the interpreter.",
+					"name": "support.function.builtin.ghost",
+					"match": "\\b(print|type)\\b(?=\\s*\\()"
+				},
+				{
+					"comment": "Standard library modules, only where used as a receiver.",
+					"name": "support.class.module.ghost",
+					"match": "\\b(console|ghost|http|io|json|math|os|random|time)\\b(?=\\s*\\.)"
 				}
 			]
 		},
 
-		"method": {
-			"name": "meta.method.ghost",
-			"begin": "(?:\\b(static)\\s+)?(\\w+=|\\w+|\\+|-|\\*|\\/|%|<=?|>=?|==|!=?|&|\\||~)",
-			"beginCaptures": {
-                "1": { "name": "storage.modifier.ghost" },
-                "2": { "name": "entity.name.function.ghost" }
-            },
-			"end": "}",
+		"function-call": {
 			"patterns": [
 				{
-                    "name": "meta.method.identifier.ghost",
-                    "begin": "\\(",
-                    "end": "\\)",
-                    "patterns": [
-                        {
-                            "name": "variable.parameter.function.ghost",
-                            "match": "\\w+"
-                        }
-                    ]
-                },
+					"comment": "obj.method(...)",
+					"match": "(?<=\\.)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+					"captures": {
+						"1": { "name": "entity.name.function.member.ghost" }
+					}
+				},
 				{
-					"name": "meta.method.body.ghost",
-					"begin": "{",
-					"end": "(?=})",
-					"patterns": [
-						{ "include": "#code" }
-					]
+					"comment": "name(...)",
+					"match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+					"captures": {
+						"1": { "name": "entity.name.function.ghost" }
+					}
 				}
 			]
 		},
 
-		"puncutation": {
+		"property-access": {
+			"match": "(?<=\\.)\\s*([A-Za-z_][A-Za-z0-9_]*)\\b",
+			"captures": {
+				"1": { "name": "variable.other.property.ghost" }
+			}
+		},
+
+		"operators": {
 			"patterns": [
 				{
-					"name": "puncuation.other.comma.ghost",
+					"name": "keyword.operator.range.ghost",
+					"match": "\\.\\."
+				},
+				{
+					"name": "keyword.operator.increment.ghost",
+					"match": "\\+\\+|--"
+				},
+				{
+					"name": "keyword.operator.assignment.compound.ghost",
+					"match": "\\+=|-=|\\*=|/="
+				},
+				{
+					"name": "keyword.operator.comparison.ghost",
+					"match": "==|!=|<=|>="
+				},
+				{
+					"name": "keyword.operator.relational.ghost",
+					"match": "<|>"
+				},
+				{
+					"name": "keyword.operator.logical.ghost",
+					"match": "\\b(and|or)\\b|!"
+				},
+				{
+					"name": "keyword.operator.ternary.ghost",
+					"match": "\\?"
+				},
+				{
+					"name": "keyword.operator.arithmetic.ghost",
+					"match": "\\+|-|\\*|/|%"
+				},
+				{
+					"name": "keyword.operator.assignment.ghost",
+					"match": "="
+				}
+			]
+		},
+
+		"punctuation": {
+			"patterns": [
+				{
+					"name": "punctuation.separator.comma.ghost",
 					"match": ","
 				},
 				{
-					"name": "puncuation.other.period.ghost",
+					"name": "punctuation.separator.colon.ghost",
+					"match": ":"
+				},
+				{
+					"name": "punctuation.terminator.semicolon.ghost",
+					"match": ";"
+				},
+				{
+					"name": "punctuation.accessor.ghost",
 					"match": "\\.(?!\\.)"
 				},
 				{
-					"name": "punctuation.other.colon.ghost",
-					"match": ":(?!=)"
+					"name": "punctuation.section.braces.ghost",
+					"match": "[{}]"
+				},
+				{
+					"name": "punctuation.section.brackets.ghost",
+					"match": "[\\[\\]]"
+				},
+				{
+					"name": "punctuation.section.parens.ghost",
+					"match": "[()]"
 				}
 			]
 		},
 
-		"string": {
+		"identifier": {
 			"patterns": [
 				{
-					"name": "string.quoted.double.ghost",
-					"begin": "\"",
-					"end": "\"",
-					"patterns": [
-						{ "include": "#stringEscapes" }
-					]
+					"comment": "Names in PascalCase are classes and traits by convention.",
+					"name": "entity.name.type.ghost",
+					"match": "\\b[A-Z][A-Za-z0-9_]*\\b"
 				},
 				{
-					"name": "string.quoted.single.ghost",
-					"begin": "'",
-					"end": "'"
-				}
-			]
-		},
-
-		"stringEscapes": {
-			"patterns": [
-				{
-					"name": "constant.character.escape.ghost",
-					"match": "\\\\(?:[0\"\\abfnrtv]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{4})"
-				},
-				{
-					"name": "invalid.illegal.unknown-escape.ghost",
-					"match": "\\\\(?:x[0-9A-Fa-f]{0,1}|u[0-9A-Fa-f]{0,3}|U[0-9A-Fa-f]{0,7}|.)"
-				},
-				{
-					"name": "constant.character.interpolation.ghost",
-					"match": "%\\((.*?)\\)"
-				}
-			]
-		},
-
-		"variable": {
-			"patterns": [
-				{
-					"name": "variable.language.ghost",
-					"match": "\\b(this|super)\\b"
+					"name": "variable.other.ghost",
+					"match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
 				}
 			]
 		}

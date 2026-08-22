@@ -2,11 +2,16 @@
     "name": "ghost-language",
     "displayName": "Ghost Language",
     "icon": "icon.png",
-    "description": "Ghost extension for Visual Studio Code.",
+    "description": "Ghost language support for Visual Studio Code, including the Lumen game engine.",
     "publisher": "GhostLanguage",
-    "version": "0.0.9",
+    "version": "0.1.0",
     "license": "MIT",
-    "keywords": ["ghost"],
+    "keywords": [
+        "ghost",
+        "ghostlang",
+        "lumen",
+        "game engine"
+    ],
     "private": true,
     "bugs": {
         "url": "https://github.com/ghost-language/vscode/issues"
@@ -16,33 +21,82 @@
         "url": "https://github.com/ghost-language/vscode.git"
     },
     "engines": {
-        "vscode": "^1.44.0"
+        "vscode": "^1.75.0"
     },
     "categories": [
-        "Programming Languages",
-        "Snippets"
+        "Programming Languages"
     ],
+    "main": "./src/extension.js",
+    "activationEvents": [
+        "onLanguage:ghost"
+    ],
+    "scripts": {
+        "test": "node test/run.js"
+    },
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": true,
+            "description": "This extension only reads the documents you have open. It runs no project code and no external tools."
+        },
+        "virtualWorkspaces": true
+    },
     "contributes": {
-        "snippets": [
+        "configuration": {
+            "title": "Ghost",
+            "properties": {
+                "ghost.lumen.enable": {
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "resource",
+                    "markdownDescription": "Include the [Lumen](https://github.com/ghost-language/lumen) game engine's modules, objects and callbacks in completion, hover and highlighting.\n\nA Lumen game is written in Ghost, so there is no separate file type to switch on. Turn this off in a project that is plain Ghost, and names like `window`, `image` and `canvas` will be left alone."
+                }
+            }
+        },
+        "languages": [
             {
-                "language": "ghost",
-                "path": "./snippets/ghost.json"
+                "id": "ghost",
+                "aliases": [
+                    "Ghost",
+                    "ghost"
+                ],
+                "extensions": [
+                    ".ghost"
+                ],
+                "configuration": "./ghost.configuration.json",
+                "icons": {
+                    "light": "./icons/ghost-light.svg",
+                    "dark": "./icons/ghost-dark.svg"
+                }
             }
         ],
-        "languages": [{
-            "id": "ghost",
-            "aliases": ["Ghost", "ghost"],
-            "extensions": [".ghost"],
-            "configuration": "./ghost.configuration.json",
-            "icons": {
-                "light": "./icons/ghost-light.svg",
-                "dark": "./icons/ghost-dark.svg"
+        "grammars": [
+            {
+                "language": "ghost",
+                "scopeName": "source.ghost",
+                "path": "./syntaxes/ghost.tmLanguage.json"
             }
-        }],
-        "grammars": [{
-            "language": "ghost",
-            "scopeName": "source.ghost",
-            "path": "./syntaxes/ghost.tmLanguage.json"
-        }]
+        ],
+        "semanticTokenScopes": [
+            {
+                "language": "ghost",
+                "scopes": {
+                    "namespace.defaultLibrary": [
+                        "support.class.module.ghost"
+                    ],
+                    "method.defaultLibrary": [
+                        "support.function.ghost"
+                    ],
+                    "property.defaultLibrary": [
+                        "support.variable.property.ghost"
+                    ],
+                    "function.defaultLibrary": [
+                        "support.function.builtin.ghost"
+                    ],
+                    "event.defaultLibrary": [
+                        "support.function.callback.ghost"
+                    ]
+                }
+            }
+        ]
     }
 }
