@@ -1,5 +1,4 @@
 .vscode/**
 test/**
 .gitignore
-CHANGELOG.md
 **/*.vsix
