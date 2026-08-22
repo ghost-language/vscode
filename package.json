@@ -12,7 +12,6 @@
         "lumen",
         "game engine"
     ],
-    "private": true,
     "bugs": {
         "url": "https://github.com/ghost-language/vscode/issues"
     },

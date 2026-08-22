@@ -297,5 +297,38 @@ console.log('\n== grammar and configuration ==');
 }
 
 
+console.log('\n== release tooling ==');
+{
+  const fs = require('fs');
+  const root = path.join(__dirname, '..');
+  const { extract } = require(path.join(root, 'scripts', 'release-notes.js'));
+  const changelog = fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8');
+  const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
+
+  // The release workflow fails if the version being tagged has no notes. Catch
+  // that here instead, while there is still something to do about it.
+  const notes = extract(changelog, version);
+  check('CHANGELOG has notes for version ' + version, Boolean(notes));
+  check('notes stop at the next version', Boolean(notes) && !notes.includes('## ['));
+
+  check('unknown version yields nothing', extract(changelog, '9.9.9') === undefined);
+  check('a version is not matched by a prefix of another',
+    extract('## [0.1.0] - 2020-01-01\n- a\n', '0.1') === undefined);
+
+  // A workflow pointing at a file that has moved only fails at release time.
+  for (const workflow of ['test.yml', 'release.yml']) {
+    const full = path.join(root, '.github', 'workflows', workflow);
+    check('workflow exists: ' + workflow, fs.existsSync(full));
+
+    if (!fs.existsSync(full)) continue;
+
+    const body = fs.readFileSync(full, 'utf8');
+    for (const referenced of body.match(/\b(?:scripts|src|test)\/[\w./-]+\.js\b/g) || []) {
+      check(workflow + ' references an existing file: ' + referenced, fs.existsSync(path.join(root, referenced)));
+    }
+  }
+}
+
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

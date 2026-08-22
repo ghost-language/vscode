@@ -1,0 +1,140 @@
+name: Release
+
+# A tag is the single source of truth for a release. Pushing `v0.1.0` tests the
+# extension, packages it, publishes it, and cuts the GitHub release carrying the
+# same `.vsix` and the notes already written in CHANGELOG.md.
+#
+#   npm version minor && git push --follow-tags
+#
+# The registries are optional. Without VSCE_PAT or OVSX_PAT configured the run
+# still produces a GitHub release with an installable `.vsix` attached, so the
+# extension can be handed out before any marketplace account exists.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release, e.g. v0.1.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Resolve the version
+        id: version
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          version="${tag#v}"
+          manifest="$(node -p "require('./package.json').version")"
+
+          # A tag that disagrees with the manifest publishes the wrong version
+          # under the right name, which cannot be undone: the Marketplace treats
+          # a version as immutable once it is taken.
+          if [ "$version" != "$manifest" ]; then
+            echo "::error::Tag $tag implies version $version, but package.json says $manifest. Reconcile them and retag."
+            exit 1
+          fi
+
+          # A version with a hyphen (0.2.0-beta.1) is a pre-release.
+          case "$version" in
+            *-*) prerelease=true ;;
+            *)   prerelease=false ;;
+          esac
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+            echo "vsix=ghost-language-$version.vsix"
+          } >> "$GITHUB_OUTPUT"
+
+      - run: npm test
+
+      - name: Extract the release notes
+        run: node scripts/release-notes.js "${{ steps.version.outputs.version }}" > release-notes.md
+
+      - name: Package
+        run: |
+          npm install -g @vscode/vsce
+          vsce package --out "${{ steps.version.outputs.vsix }}" \
+            ${{ steps.version.outputs.prerelease == 'true' && '--pre-release' || '' }}
+
+      - name: Publish to the Visual Studio Marketplace
+        id: marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          VSIX: ${{ steps.version.outputs.vsix }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::VSCE_PAT is not set, so this release was not published to the Marketplace. The .vsix is still attached to the GitHub release."
+            exit 0
+          fi
+
+          if [ "$PRERELEASE" = 'true' ]; then
+            vsce publish --packagePath "$VSIX" --pre-release
+          else
+            vsce publish --packagePath "$VSIX"
+          fi
+
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to Open VSX
+        id: openvsx
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          VSIX: ${{ steps.version.outputs.vsix }}
+        run: |
+          # Open VSX is what VSCodium, Cursor and the other non-Microsoft builds
+          # install from; they cannot reach the Marketplace.
+          if [ -z "$OVSX_PAT" ]; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "Open VSX token not set; skipping."
+            exit 0
+          fi
+
+          npm install -g ovsx
+          ovsx publish "$VSIX" -p "$OVSX_PAT"
+          echo "published=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VSIX: ${{ steps.version.outputs.vsix }}
+        run: |
+          gh release create "$TAG" "$VSIX" \
+            --title "$TAG" \
+            --notes-file release-notes.md \
+            ${{ steps.version.outputs.prerelease == 'true' && '--prerelease' || '' }}
+
+      - name: Summary
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          MARKETPLACE: ${{ steps.marketplace.outputs.published }}
+          OPENVSX: ${{ steps.openvsx.outputs.published }}
+        run: |
+          {
+            echo "### Released $VERSION"
+            echo
+            echo "| Target | |"
+            echo "| --- | --- |"
+            echo "| GitHub release | published |"
+            echo "| Visual Studio Marketplace | $([ "$MARKETPLACE" = 'true' ] && echo published || echo 'skipped — VSCE_PAT not set') |"
+            echo "| Open VSX | $([ "$OPENVSX" = 'true' ] && echo published || echo 'skipped — OVSX_PAT not set') |"
+          } >> "$GITHUB_STEP_SUMMARY"
