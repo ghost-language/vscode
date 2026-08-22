@@ -107,26 +107,38 @@ to edit; everything else reads from them.
 
 ## Releasing
 
-A tag is the whole release. Pushing one runs the tests, packages the extension, publishes it, and
-cuts the GitHub release carrying the same `.vsix` and the notes already written in the changelog:
+Publishing a GitHub release is the whole release. It runs the tests, packages the extension, pushes
+it to the registries, and attaches the `.vsix` to that same release.
 
-```bash
-# Add a "## [0.2.0] - YYYY-MM-DD" section to CHANGELOG.md first.
-npm version minor
-git push --follow-tags
-```
+1. Bump the version and write the notes:
 
-`npm version` bumps `package.json`, commits, and tags in one step. The workflow refuses to run if the
-tag and the manifest disagree, because the Marketplace treats a version as immutable once taken —
+   ```bash
+   # Add a "## [0.2.0] - YYYY-MM-DD" section to CHANGELOG.md.
+   npm version minor
+   git push --follow-tags
+   ```
+
+2. Draft a release on that tag and publish it. Leave the notes blank and the changelog section for
+   the version fills them in.
+
+The release is the trigger rather than the tag, because publishing a release creates its tag too —
+a workflow listening for tag pushes would fire alongside the release and could only race it.
+
+The run stops before publishing anything if the tag and the manifest disagree, or if the changelog
+has no section for the version. The Marketplace treats a version as immutable once taken, so
 publishing the wrong one under the right name cannot be undone.
 
-A version with a hyphen (`0.2.0-beta.1`) is released as a pre-release to both the Marketplace and
-GitHub.
+Marking the release a pre-release on GitHub publishes it to the Marketplace's pre-release channel.
+
+To re-run a release that failed partway — a missing token, a registry timeout — use the workflow's
+**Run workflow** button with the existing tag. Nothing needs to be retagged, and re-running is safe:
+the `.vsix` is replaced rather than added twice, and a version already on the Marketplace fails there
+without affecting the rest.
 
 ### Tokens
 
-Both are optional. With neither configured a tag still produces a GitHub release with an installable
-`.vsix` attached, which is enough to hand the extension to someone.
+Both are optional. With neither configured a release still gets an installable `.vsix` attached,
+which is enough to hand the extension to someone.
 
 | Secret | For | |
 | --- | --- | --- |

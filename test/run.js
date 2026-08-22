@@ -315,6 +315,25 @@ console.log('\n== release tooling ==');
   check('a version is not matched by a prefix of another',
     extract('## [0.1.0] - 2020-01-01\n- a\n', '0.1') === undefined);
 
+  // v0.1.0 shipped with a release-notes.md inside it, because the workflow
+  // wrote that file into the workspace and then packaged the workspace.
+  // Anything a release step generates has to land outside the checkout.
+  const release = fs.readFileSync(path.join(root, '.github', 'workflows', 'release.yml'), 'utf8');
+
+  for (const [what, line] of Object.entries({
+    'the packaged .vsix': /vsix=(\S+)/.exec(release) && /vsix=(\S+)/.exec(release)[1],
+    'the generated release notes': /release-notes\.js[^\n]*?>\s*(\S+)/.exec(release) && /release-notes\.js[^\n]*?>\s*(\S+)/.exec(release)[1]
+  })) {
+    check(what + ' is written outside the workspace', Boolean(line) && line.includes('RUNNER_TEMP'), String(line));
+  }
+
+  // The release is the trigger. Firing on the tag as well would race the
+  // release that created it.
+  check('release.yml follows a published release', /^\s*release:\s*$/m.test(release) && release.includes('types: [published]'));
+  check('release.yml does not also fire on tags', !/tags:/.test(release));
+  check('release.yml attaches to the release rather than creating one',
+    release.includes('gh release upload') && !release.includes('gh release create'));
+
   // A workflow pointing at a file that has moved only fails at release time.
   for (const workflow of ['test.yml', 'release.yml']) {
     const full = path.join(root, '.github', 'workflows', workflow);
