@@ -53,7 +53,7 @@ function activate(context) {
 		vscode.languages.registerCompletionItemProvider(
 			SELECTOR,
 			new GhostCompletionProvider(getApi),
-			'.'
+			'.', '"', "'", '{', ':'
 		),
 
 		vscode.languages.registerHoverProvider(SELECTOR, new GhostHoverProvider(getApi)),

@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Rewritten for Ghost's and Lumen's move to an import-based module system: only `console` and the
+  global `type()` function are reachable without an `import` now, so completion, hover, signature
+  help and semantic highlighting all resolve a module, a named import, an `as` alias, or the combined
+  `import name, { a, b } from "scheme:module"` form against what a document actually imports, rather
+  than treating the whole standard library and Lumen's engine as always in scope.
+- `src/api/ghost.js` re-transcribed against the current interpreter: the old `io` module split into
+  `file` and `path`; the old `time` module is gone, folded into `os.sleep` and a new `date` module
+  (date-fns-style, UTC only); `math` gained trigonometry, a full linear-algebra layer, statistics, and
+  arithmetic exposed as callable methods; `List` gained `map`, `filter`, `reduce`, `sort`, `slice`,
+  `concat`, `contains`, `reverse`, `unique`, `each` and a new `shift()`; and `Map` gained `get`, `set`,
+  `has`, `keys`, `values`, `length` and `merge` — it was previously undocumented as having none.
+- `src/api/lumen.js` re-transcribed against the current engine: Lumen no longer extends Ghost's `math`
+  module at all (everything it used to add there now ships natively in `ghost:math`); `Image`,
+  `Spritesheet`, `Animation`, `Source`, `Font`, `Target` and `Quad` are `new`-able classes imported from
+  their owning module (`lumen:image`, `lumen:audio`, `lumen:canvas`, `lumen:font`) rather than built
+  through module-level factory methods like the old `image.newSpritesheet()` and `canvas.newQuad()`.
+- Completion now also completes the `import` statement itself — a module name after `import `, a
+  module name inside an open `"ghost:`/`"lumen:` string, and a module's members and classes inside
+  `{ }` once the `from "scheme:module"` on the same line names it.
+
+### Fixed
+- `List.pop()` removed and returned the *first* element, not the last, in the previous release — the
+  interpreter has since swapped the two: `pop()` now mirrors `push()` from the end of the list, and the
+  old first-element behaviour lives on as the new `shift()`.
+- `print()` no longer exists as a global function. It has fully split into `console.log` (with a
+  trailing newline) and `console.write` (without); the old `console.print` name is gone too.
 
 ## [0.1.0] - 2026-08-22
 ### Added

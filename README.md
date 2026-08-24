@@ -15,28 +15,45 @@ compound assignments and `..`.
 
 ### Completion
 
-Completion knows the standard library, and works out what a receiver is before offering its members:
+Ghost's standard library, and Lumen's, are import-based: only `console` and the global `type()`
+function are reachable without one, so completion tracks what a document actually `import`s and offers
+members only for that — `math.` before `import "ghost:math"` offers nothing, because at runtime it
+would be nothing.
 
 ```ghost
-sheet = image.newSpritesheet('characters.png', 16)
-walk  = sheet.newAnimation([4, 5, 6, 7], 0.16)
+import "ghost:math"
+import { Spritesheet, Animation } from "lumen:image"
+
+sheet = new Spritesheet('characters.png', 16)
+walk  = new Animation(sheet, [4, 5, 6, 7], 0.16)
 
 walk.        # offers Animation's methods, not a generic list
+math.        # offers math's members, because this document imported it
 ```
 
-It follows assignments through the document to do this, so a variable holding a value from a library
-call gets the right members even though Ghost is dynamically typed and nothing is annotated. Where a
-receiver genuinely cannot be identified it offers every built-in method there is, each labelled with
-the types that have it, rather than offering nothing.
+Writing the `import` itself is completed too: typing `import ca` offers `canvas` and inserts
+`"lumen:canvas"`; typing inside an open `"ghost:` or `"lumen:` string completes the module name; and
+completing inside `{ }` on a line that already names its module (`import { |} from "lumen:image"`)
+offers that module's members and classes, skipping whichever are already listed.
 
-Also completed: modules and global functions, the names the file itself declares, `this.` members
-inside a class or trait, and — under Lumen — the engine callbacks, inserted as whole function bodies.
+Once imported, a name is completed wherever it is used — `import { sqrt } from "ghost:math"` makes
+`sqrt` itself completable as a callable, and an aliased `import "ghost:math" as m` completes `m`, not
+`math`. Receivers are also resolved by following assignments through the document, including `new`, so
+a variable holding a library value gets the right members even though Ghost is dynamically typed and
+nothing is annotated. Where a receiver genuinely cannot be identified it offers every built-in method
+there is, each labelled with the types that have it, rather than offering nothing.
+
+Also completed: keywords, the names the file itself declares, `this.` members inside a class or trait,
+and — under Lumen — the engine callbacks, inserted as whole function bodies. Callbacks need no import:
+they are plain top-level functions the engine finds by name, not module members.
 
 ### Hover and signature help
 
-Hover documents modules, their methods and properties, global functions, and built-in methods,
-resolved through the same inference completion uses. Signature help shows which argument comes next,
-which matters most for the drawing calls with long optional tails:
+Hover documents modules (under whatever name or alias imported them), their methods and properties,
+imported members used bare, global functions, Lumen classes, and built-in methods, resolved through the
+same import-aware inference completion uses. A module hovered before it is imported, or after the name
+is reassigned to something else, documents nothing — the same thing the interpreter would say. Signature
+help shows which argument comes next, which matters most for the drawing calls with long optional tails:
 
 ```ghost
 sprite.draw(x, y, [rotation, sx, sy, ox, oy])
@@ -49,9 +66,12 @@ in breadcrumbs, and in **Go to Symbol in File**, nested the way they are written
 
 ### Semantic highlighting
 
-Layered over the grammar, this resolves what a regular expression cannot. A name the file assigns to
-is that assignment — writing `image = 3` shadows the module, and the colouring follows. Members are
-checked against the module they are reached through, so a typo stops being highlighted.
+Layered over the grammar, this resolves what a regular expression cannot. A module access is
+highlighted only where the document actually imports it — under its own name, an `as` alias, or through
+the combined import form — the same resolution completion and hover use. A name the file assigns to is
+that assignment, not an import — writing `image = 3` after `import "lumen:image"` shadows the import,
+and the colouring follows. Members are checked against the module they are reached through, so a typo
+stops being highlighted.
 
 ### Editor behaviour
 
@@ -61,17 +81,29 @@ on Enter.
 ## Lumen
 
 A Lumen game is written in Ghost — `.lumen` is a packaged archive, not a source format — so there is
-no second language here. Lumen's modules, object types and callbacks are folded into the Ghost
-surface instead, and can be switched off:
+no second language here. Lumen registers its modules under its own `lumen:` import scheme, the same
+mechanism Ghost's own standard library uses under `ghost:`, so a game imports what it needs exactly
+the way any other Ghost script does:
+
+```ghost
+import "lumen:canvas"
+import "lumen:color"
+import audio, { Source } from "lumen:audio"
+```
+
+Nothing from Lumen is global — not even `canvas` or `window` — so this extension's completion, hover
+and highlighting only ever offer a Lumen name where a document actually imported it. That can be
+switched off entirely, for a workspace that is plain Ghost with no engine in play:
 
 | Setting | Default | |
 | --- | --- | --- |
-| `ghost.lumen.enable` | `true` | Include Lumen's modules, objects and callbacks in completion, hover and highlighting. |
+| `ghost.lumen.enable` | `true` | Include Lumen's modules, classes and callbacks in completion, hover and highlighting. |
 
-Turn it off in a project that is plain Ghost, so that a variable named `window`, `image` or `canvas`
-is not dressed up as something from an engine the project does not use. Lumen's additions to the
-`math` module follow the same switch, matching how the engine registers them onto Ghost's own module
-rather than introducing a second.
+Turning it off removes every Lumen module and class from what can be imported and completed, and every
+Lumen callback from what is recognised in a top-level `function` declaration. Lumen no longer extends
+Ghost's own `math` module the way it once did — everything it used to add there now ships natively in
+`ghost:math` itself, imported the same way whether or not Lumen is in play, so this setting has nothing
+left to do to `math`.
 
 ## Usage
 

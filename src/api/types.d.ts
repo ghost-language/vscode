@@ -28,6 +28,12 @@ export interface Module {
 	source: Source;
 	doc: string;
 	members: Member[];
+	/**
+	 * Reachable without an `import` at all. True only for `console` — every
+	 * other module, in both Ghost and Lumen, has to be pulled in with
+	 * `import ... from "ghost:name"` or `"lumen:name"`.
+	 */
+	global?: boolean;
 }
 
 export interface ObjectType {
@@ -35,6 +41,13 @@ export interface ObjectType {
 	source: Source;
 	doc: string;
 	methods: Member[];
+	/**
+	 * The module a class is `new`-able from — set only for a type reached via
+	 * `import { Name } from "<source>:<module>"` (Lumen's Image, Spritesheet,
+	 * Animation, Source, Font, Target, Quad). Unset for a core value type
+	 * (String, List, Number, Map, Date), which needs no import at all.
+	 */
+	module?: string;
 }
 
 export interface GlobalFunction {
@@ -43,6 +56,8 @@ export interface GlobalFunction {
 	signature: string;
 	doc: string;
 	returns?: string;
+	/** Reachable without an `import`. True only for `type`. */
+	global?: boolean;
 }
 
 export interface Callback {

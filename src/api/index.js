@@ -15,10 +15,12 @@ const lumen = require('./lumen');
  * `ghost.lumen.enable`.
  *
  * Lumen is not a separate language — a Lumen game is Ghost source — so the two
- * surfaces are merged rather than kept apart. Where they overlap they are
- * genuinely one thing at runtime: Lumen registers its extra maths onto Ghost's
- * own `math` module rather than introducing a second, so the merge here mirrors
- * what the interpreter does.
+ * surfaces are merged rather than kept apart. They no longer overlap at
+ * runtime the way they once did: Ghost's own `math` module grew everything
+ * Lumen used to bolt onto it, so Lumen's modules today are simply appended
+ * under their own `lumen:` scheme, each requiring its own `import` exactly
+ * like Ghost's `ghost:` modules do — only `console` (and the global `type()`
+ * function) are ever reachable without one.
  *
  * @typedef {object} Api
  * @property {boolean} lumen                    Whether the Lumen surface is included.
@@ -48,17 +50,7 @@ function build(withLumen) {
 	}
 
 	/** @type {Module[]} */
-	const modules = ghost.MODULES.map((module) => {
-		if (!withLumen || module.name !== 'math') {
-			return module;
-		}
-
-		// Lumen registers its additions onto Ghost's math module, so a game sees
-		// one module with both sets of methods.
-		return Object.assign({}, module, {
-			members: module.members.concat(lumen.MATH_EXTENSIONS)
-		});
-	});
+	const modules = ghost.MODULES.slice();
 
 	if (withLumen) {
 		modules.push(...lumen.MODULES);
@@ -123,6 +115,38 @@ function findTypeMethod(api, typeName, methodName) {
 	const member = type.methods.find((candidate) => candidate.name === methodName);
 
 	return member ? { type, member } : undefined;
+}
+
+/**
+ * Finds a `new`-able class exported by a specific scheme module — `import {
+ * Spritesheet } from "lumen:image"` needs to know that `Spritesheet` really
+ * is one of `image`'s exports before binding it, the same check the
+ * interpreter itself makes at import time.
+ *
+ * @param {Api} api
+ * @param {import('./types').Source} scheme
+ * @param {string} moduleName
+ * @param {string} className
+ * @returns {ObjectType | undefined}
+ */
+function findClass(api, scheme, moduleName, className) {
+	const type = api.typeByName.get(className);
+
+	return type && type.source === scheme && type.module === moduleName ? type : undefined;
+}
+
+/**
+ * Every class a scheme module exports — what `import * from "scheme:name"`
+ * and the combined form's `{ * }` pull in alongside a module's methods and
+ * properties.
+ *
+ * @param {Api} api
+ * @param {import('./types').Source} scheme
+ * @param {string} moduleName
+ * @returns {ObjectType[]}
+ */
+function classesOf(api, scheme, moduleName) {
+	return api.types.filter((type) => type.source === scheme && type.module === moduleName);
 }
 
 /**
@@ -205,6 +229,8 @@ module.exports = {
 	build,
 	findModuleMember,
 	findTypeMethod,
+	findClass,
+	classesOf,
 	findMethodEverywhere,
 	allMethods,
 	findFunction,

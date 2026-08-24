@@ -12,8 +12,9 @@ const { documentationFor } = require('./completion');
  * Hover documentation.
  *
  * The word under the cursor is looked up the same way completion resolves a
- * receiver, so `sheet.newAnimation` documents the Spritesheet method even
- * though `sheet` is an ordinary untyped variable.
+ * receiver, so `walk.setSpeed` documents the Animation method even though
+ * `walk` is an ordinary untyped variable, once `walk = new Animation(...)`
+ * appears earlier in the document.
  */
 class GhostHoverProvider {
 	/**
@@ -69,7 +70,8 @@ class GhostHoverProvider {
 
 		if (chain) {
 			const known = analyzer.inferTypes(model, document.getText());
-			const resolved = analyzer.resolveChain(model, chain, known);
+			const imports = analyzer.resolveImports(model, document.getText());
+			const resolved = analyzer.resolveChain(model, chain, known, imports);
 
 			if (resolved && resolved.kind === 'module') {
 				const found = api.findModuleMember(model, resolved.name, word);
@@ -124,7 +126,13 @@ class GhostHoverProvider {
 	 * @returns {vscode.Hover | undefined}
 	 */
 	plainHover(model, document, range, word, position) {
-		const module = model.moduleByName.get(word);
+		const text = document.getText();
+		const imports = analyzer.resolveImports(model, text);
+
+		// `console` needs no import; every other module has to be the name (or
+		// alias) something in the document actually imported it under.
+		const moduleName = analyzer.resolveModuleName(model, word, imports);
+		const module = moduleName && model.moduleByName.get(moduleName);
 
 		if (module) {
 			const markdown = new vscode.MarkdownString();
@@ -133,6 +141,35 @@ class GhostHoverProvider {
 			markdown.appendMarkdown(module.doc + '\n\n_' + (module.source === 'lumen' ? 'Lumen' : 'Ghost') + ' module_');
 
 			return new vscode.Hover(markdown, range);
+		}
+
+		const binding = imports.get(word);
+
+		// A name pulled in with `import { sqrt } from "ghost:math"` reads, on
+		// its own, exactly like the module method it is.
+		if (binding && binding.kind === 'member') {
+			const owner = model.moduleByName.get(binding.module);
+			const member = owner && owner.members.find((candidate) => candidate.name === binding.member);
+
+			if (member) {
+				return this.render(range, member.signature || binding.module + '.' + member.name, member, member.source || binding.scheme);
+			}
+		}
+
+		// A Lumen class pulled in with `import { Spritesheet } from
+		// "lumen:image"` — worth documenting on its own name, not only once it
+		// is behind `new`.
+		if (binding && binding.kind === 'class') {
+			const type = model.typeByName.get(/** @type {string} */ (binding.type));
+
+			if (type) {
+				const markdown = new vscode.MarkdownString();
+
+				markdown.appendCodeblock(word, 'ghost');
+				markdown.appendMarkdown(type.doc);
+
+				return new vscode.Hover(markdown, range);
+			}
 		}
 
 		const fn = api.findFunction(model, word);
@@ -148,7 +185,7 @@ class GhostHoverProvider {
 			return this.render(range, callback.signature, callback, callback.source);
 		}
 
-		const variableType = analyzer.inferTypes(model, document.getText()).get(word);
+		const variableType = analyzer.inferTypes(model, text).get(word);
 
 		if (variableType) {
 			const type = model.typeByName.get(variableType);
