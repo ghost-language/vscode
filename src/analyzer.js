@@ -306,17 +306,363 @@ function enclosingType(symbols, offset) {
 }
 
 /**
+ * What a name bound by an `import` statement actually refers to.
+ *
+ * @typedef {object} ImportBinding
+ * @property {'module'|'member'|'class'} kind
+ * @property {import('./api/types').Source} scheme  `ghost` or `lumen` — the part of `scheme:name` before the colon.
+ * @property {string} module   The module's own name (`math`, `canvas`, ...), regardless of any local alias.
+ * @property {string} [member] The member name, when `kind` is `'member'`.
+ * @property {string} [type]   The class's own name, when `kind` is `'class'`.
+ */
+
+/**
+ * Splits an import path into its scheme and the name after it, mirroring the
+ * interpreter's own `schemePattern` in `evaluator/import.go`: two or more
+ * letters before a `:`, so a Windows drive letter is never mistaken for one.
+ * A path with no such prefix is a `.ghost` file import instead, which this
+ * analyzer cannot resolve — there is no project on disk to read it from.
+ *
+ * @param {string} path
+ * @returns {{ scheme: string, name: string } | undefined}
+ */
+function schemeOf(path) {
+	const match = /^([A-Za-z][A-Za-z0-9+.-]+):(.+)$/.exec(path);
+
+	return match ? { scheme: match[1], name: match[2] } : undefined;
+}
+
+/**
+ * Every name an `import` statement binds in a document, resolved against the
+ * API model.
+ *
+ * Ghost's module system moved behind `import`: only `console` and `type` are
+ * reachable without one (`model.modules`/`model.functions` mark these with
+ * `global: true`), so a receiver like `math` or `canvas` means nothing until
+ * something in the document actually imports it — including through an
+ * alias (`import "ghost:math" as m`), a named pull (`import { pi } from
+ * "ghost:math"`), or the combined form (`import image, { Spritesheet } from
+ * "lumen:image"`). This walks the document once and answers what each bound
+ * name resolves to, so the rest of the analyzer can tell a real module access
+ * from a variable that merely happens to share a module's name.
+ *
+ * A `.ghost` file import (no `scheme:` prefix) binds nothing here — there is
+ * no project on disk to read its exports from — except that its own bound
+ * name is still worth knowing is *taken*, which is what `parseSymbols`-based
+ * shadow tracking already covers separately.
+ *
+ * @param {Api} model
+ * @param {string} text
+ * @returns {Map<string, ImportBinding>}
+ */
+function resolveImports(model, text) {
+	const stripped = strip(text);
+	/** @type {Map<string, ImportBinding>} */
+	const bindings = new Map();
+	const importKeyword = /\bimport\b/g;
+	let match;
+
+	while ((match = importKeyword.exec(stripped)) !== null) {
+		parseImportAt(model, text, stripped, importKeyword.lastIndex, bindings);
+	}
+
+	return bindings;
+}
+
+/**
+ * Parses one `import` statement starting just past the keyword, in the style
+ * of `parser/import.go`: a bare string (optionally `as`-aliased), or a
+ * `from`-form whose name list may be braced, unbraced, wildcard, or the
+ * combined `name, { ... }` shape. Best-effort — a statement this cannot make
+ * sense of is simply left unbound, the same way an unresolved receiver
+ * elsewhere in this file falls back to "unknown" rather than raising.
+ *
+ * @param {Api} model
+ * @param {string} text      the original document, for pulling real string contents
+ * @param {string} stripped  comments and string bodies blanked, offsets preserved
+ * @param {number} start     offset just past the `import` keyword
+ * @param {Map<string, ImportBinding>} bindings
+ */
+function parseImportAt(model, text, stripped, start, bindings) {
+	const len = stripped.length;
+	let i = start;
+
+	const skipSpace = () => { while (i < len && /\s/.test(stripped[i])) i++; };
+	const at = (word) => stripped.startsWith(word, i) && !/\w/.test(stripped[i + word.length] || '');
+	const readIdent = () => {
+		const found = /^[A-Za-z_]\w*/.exec(stripped.slice(i));
+
+		if (!found) {
+			return undefined;
+		}
+
+		i += found[0].length;
+
+		return found[0];
+	};
+	const readString = () => {
+		const quote = stripped[i];
+		let j = i + 1;
+
+		// The interior is blanked to spaces by `strip`, so the next occurrence
+		// of the same quote character is always the real closing quote.
+		while (j < len && stripped[j] !== quote) {
+			j++;
+		}
+
+		const raw = text.slice(i + 1, j);
+
+		i = j + 1;
+
+		return raw;
+	};
+
+	skipSpace();
+
+	if (stripped[i] === '"' || stripped[i] === "'") {
+		// Bare form: import "path" [as alias]
+		const path = readString();
+
+		skipSpace();
+
+		let alias;
+
+		if (at('as')) {
+			i += 2;
+			skipSpace();
+			alias = readIdent();
+		}
+
+		bindWholeModule(model, bindings, path, alias);
+
+		return;
+	}
+
+	// From-form: [name ,] ( { list } | list | * ) from "path"
+	let combinedAlias;
+	const beforeName = i;
+	const firstIdent = readIdent();
+
+	if (firstIdent) {
+		skipSpace();
+
+		if (stripped[i] === ',') {
+			let k = i + 1;
+
+			while (k < len && /\s/.test(stripped[k])) {
+				k++;
+			}
+
+			if (stripped[k] === '{') {
+				combinedAlias = firstIdent;
+				i = k;
+			} else {
+				i = beforeName;
+			}
+		} else {
+			i = beforeName;
+		}
+	} else {
+		i = beforeName;
+	}
+
+	/** @type {{ name: string, alias: string }[]} */
+	const names = [];
+	let everything = false;
+	const braced = stripped[i] === '{';
+
+	if (braced) {
+		i++;
+	}
+
+	skipSpace();
+
+	if (stripped[i] === '*') {
+		everything = true;
+		i++;
+		skipSpace();
+
+		// A braced wildcard (`{ * }`, from the combined form) still has its
+		// closing brace to consume before the `from` check below; an unbraced
+		// `import * from "..."` has nothing more to skip here.
+		if (braced && stripped[i] === '}') {
+			i++;
+			skipSpace();
+		}
+	}
+
+	while (!everything) {
+		if (braced && stripped[i] === '}') {
+			i++;
+			break;
+		}
+
+		if (!braced && at('from')) {
+			break;
+		}
+
+		const name = readIdent();
+
+		if (!name) {
+			return;
+		}
+
+		let alias = name;
+
+		skipSpace();
+
+		if (at('as')) {
+			i += 2;
+			skipSpace();
+			alias = readIdent() || alias;
+			skipSpace();
+		}
+
+		names.push({ name, alias });
+
+		if (stripped[i] === ',') {
+			i++;
+			skipSpace();
+			continue;
+		}
+
+		// No comma: the list is done. A braced list still needs its closing `}`
+		// consumed before the `from` check below, the same way the top-of-loop
+		// check consumes it for an empty or trailing-comma list.
+		if (braced) {
+			skipSpace();
+
+			if (stripped[i] === '}') {
+				i++;
+			}
+		}
+
+		break;
+	}
+
+	skipSpace();
+
+	if (!at('from')) {
+		return;
+	}
+
+	i += 4;
+	skipSpace();
+
+	if (stripped[i] !== '"' && stripped[i] !== "'") {
+		return;
+	}
+
+	const path = readString();
+
+	if (combinedAlias) {
+		bindWholeModule(model, bindings, path, combinedAlias);
+	}
+
+	bindNamedMembers(model, bindings, path, names, everything);
+}
+
+/**
+ * @param {Api} model
+ * @param {Map<string, ImportBinding>} bindings
+ * @param {string} path
+ * @param {string} [alias]
+ */
+function bindWholeModule(model, bindings, path, alias) {
+	const scheme = schemeOf(path);
+
+	if (!scheme || !model.moduleByName.has(scheme.name)) {
+		return;
+	}
+
+	const name = alias || scheme.name;
+
+	bindings.set(name, {
+		kind: 'module',
+		scheme: /** @type {import('./api/types').Source} */ (scheme.scheme),
+		module: scheme.name
+	});
+}
+
+/**
+ * @param {Api} model
+ * @param {Map<string, ImportBinding>} bindings
+ * @param {string} path
+ * @param {{ name: string, alias: string }[]} names
+ * @param {boolean} everything
+ */
+function bindNamedMembers(model, bindings, path, names, everything) {
+	const scheme = schemeOf(path);
+
+	if (!scheme) {
+		return;
+	}
+
+	const schemeName = /** @type {import('./api/types').Source} */ (scheme.scheme);
+	const module = model.moduleByName.get(scheme.name);
+
+	if (everything) {
+		if (module) {
+			for (const member of module.members) {
+				bindings.set(member.name, { kind: 'member', scheme: schemeName, module: scheme.name, member: member.name });
+			}
+		}
+
+		for (const type of api.classesOf(model, schemeName, scheme.name)) {
+			bindings.set(type.name, { kind: 'class', scheme: schemeName, module: scheme.name, type: type.name });
+		}
+
+		return;
+	}
+
+	for (const { name, alias } of names) {
+		const cls = api.findClass(model, schemeName, scheme.name, name);
+
+		if (cls) {
+			bindings.set(alias, { kind: 'class', scheme: schemeName, module: scheme.name, type: cls.name });
+			continue;
+		}
+
+		if (module && module.members.some((member) => member.name === name)) {
+			bindings.set(alias, { kind: 'member', scheme: schemeName, module: scheme.name, member: name });
+		}
+	}
+}
+
+/**
+ * The real module name a receiver refers to — `console` needs no import;
+ * anything else has to be that exact bound name, aliased or not.
+ *
+ * @param {Api} model
+ * @param {string} receiver
+ * @param {Map<string, ImportBinding>} imports
+ * @returns {string | undefined}
+ */
+function resolveModuleName(model, receiver, imports) {
+	const direct = model.moduleByName.get(receiver);
+
+	if (direct && direct.global) {
+		return receiver;
+	}
+
+	const binding = imports.get(receiver);
+
+	return binding && binding.kind === 'module' ? binding.module : undefined;
+}
+
+/**
  * Works out which API type each variable in a document holds.
  *
  * Ghost is dynamically typed, so this is a best effort and deliberately a
  * conservative one: it only records a variable whose value comes from something
- * the API model describes. `sheet = image.newSpritesheet(...)` is recorded
- * because `newSpritesheet` declares what it returns; `x = 3 + y` is not
- * recorded at all, which is better than recording it wrongly.
+ * the API model describes. `today = date.now()` is recorded because `now`
+ * declares what it returns, and `sheet = new Spritesheet(...)` is recorded
+ * directly from the class being constructed; `x = 3 + y` is not recorded at
+ * all, which is better than recording it wrongly.
  *
  * Assignments are resolved repeatedly until nothing new is learned, so a chain
- * like `sheet = image.newSpritesheet(...)` then `walk = sheet.newAnimation(...)`
- * resolves both.
+ * like `sheet = new Spritesheet(...)` then `frame = sheet.getQuad(0)` resolves
+ * both.
  *
  * @param {Api} model
  * @param {string} text
@@ -324,6 +670,7 @@ function enclosingType(symbols, offset) {
  */
 function inferTypes(model, text) {
 	const stripped = strip(text);
+	const imports = resolveImports(model, text);
 	/** @type {Map<string, string>} */
 	const types = new Map();
 
@@ -336,6 +683,29 @@ function inferTypes(model, text) {
 
 	while ((match = memberAssign.exec(stripped)) !== null) {
 		pending.push({ target: match[1], receiver: match[2], member: match[3] });
+	}
+
+	// `name = new Type(...)` — direct, since a class is bound to its own name
+	// (or its import alias) rather than something that has to be looked up.
+	const newAssign = /\b([A-Za-z_]\w*)[ \t]*=[ \t]*new[ \t]+([A-Za-z_]\w*)\s*\(/g;
+
+	while ((match = newAssign.exec(stripped)) !== null) {
+		const [, target, typeName] = match;
+
+		if (types.has(target)) {
+			continue;
+		}
+
+		if (model.typeByName.has(typeName)) {
+			types.set(target, typeName);
+			continue;
+		}
+
+		const binding = imports.get(typeName);
+
+		if (binding && binding.kind === 'class') {
+			types.set(target, /** @type {string} */ (binding.type));
+		}
 	}
 
 	// Literals, which need no resolving.
@@ -360,7 +730,7 @@ function inferTypes(model, text) {
 				continue;
 			}
 
-			const returns = returnTypeOf(model, receiver, member, types);
+			const returns = returnTypeOf(model, receiver, member, types, imports);
 
 			if (returns) {
 				types.set(target, returns);
@@ -383,10 +753,12 @@ function inferTypes(model, text) {
  * @param {string} receiver
  * @param {string} member
  * @param {Map<string, string>} known
+ * @param {Map<string, ImportBinding>} imports
  * @returns {string | undefined}
  */
-function returnTypeOf(model, receiver, member, known) {
-	const onModule = api.findModuleMember(model, receiver, member);
+function returnTypeOf(model, receiver, member, known, imports) {
+	const moduleName = resolveModuleName(model, receiver, imports);
+	const onModule = moduleName && api.findModuleMember(model, moduleName, member);
 
 	if (onModule) {
 		return onModule.member.returns;
@@ -486,22 +858,35 @@ function receiverChain(strippedLine, dotIndex) {
 /**
  * Resolves what a receiver chain refers to.
  *
+ * The head of the chain only counts as a module when it is actually reachable
+ * that way — `console` needs no import, but `canvas`, `math` and everything
+ * else does, whether reached under its own name, an `as` alias, or the
+ * combined import form. A bare built-in type name (`String`, `List`, ...)
+ * still resolves on its own, since those need no import either; a Lumen
+ * class does, the same as a module.
+ *
  * @param {Api} model
  * @param {string[]} chain
  * @param {Map<string, string>} known
+ * @param {Map<string, ImportBinding>} imports
  * @returns {{ kind: 'module', name: string } | { kind: 'type', name: string } | undefined}
  */
-function resolveChain(model, chain, known) {
+function resolveChain(model, chain, known, imports) {
 	const [head, ...rest] = chain;
 
 	/** @type {{ kind: 'module'|'type', name: string } | undefined} */
 	let current;
 
-	if (model.moduleByName.has(head)) {
-		current = { kind: 'module', name: head };
+	const moduleName = resolveModuleName(model, head, imports);
+	const importedClass = imports.get(head);
+
+	if (moduleName) {
+		current = { kind: 'module', name: moduleName };
 	} else if (known.has(head)) {
 		current = { kind: 'type', name: /** @type {string} */ (known.get(head)) };
-	} else if (model.typeByName.has(head)) {
+	} else if (importedClass && importedClass.kind === 'class') {
+		current = { kind: 'type', name: /** @type {string} */ (importedClass.type) };
+	} else if (model.typeByName.has(head) && !model.typeByName.get(head).module) {
 		current = { kind: 'type', name: head };
 	} else {
 		return undefined;
@@ -537,5 +922,7 @@ module.exports = {
 	inferTypes,
 	receiverChain,
 	resolveChain,
+	resolveImports,
+	resolveModuleName,
 	RESERVED_BEFORE_PAREN
 };

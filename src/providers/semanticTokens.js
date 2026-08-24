@@ -20,8 +20,13 @@ const LEGEND = new vscode.SemanticTokensLegend(
  * regular expression can answer, so it is answered here, where the whole
  * document is in hand:
  *
- *   - A name the document assigns to is that assignment, not a module. Writing
- *     `image = 3` shadows the module, and the highlighting follows.
+ *   - Only `console` is reachable without an `import`. Everything else — a
+ *     module accessed by name, an alias, or a name pulled in with `from` — is
+ *     highlighted only where the document actually imports it, resolved
+ *     through `analyzer.resolveImports` the same way completion and hover are.
+ *   - A name the document assigns to is that assignment, not an import. Writing
+ *     `image = 3` after `import "lumen:image"` shadows the import, and the
+ *     highlighting follows.
  *   - Whether Lumen's surface exists at all follows `ghost.lumen.enable`, which
  *     a grammar cannot be switched off by.
  *   - Members are resolved against the module they are actually reached
@@ -45,6 +50,7 @@ class GhostSemanticTokensProvider {
 		const stripped = analyzer.strip(text);
 		const builder = new vscode.SemanticTokensBuilder(LEGEND);
 		const shadowed = shadowedNames(text);
+		const imports = analyzer.resolveImports(model, text);
 
 		/** @type {(offset: number, length: number, type: string, modifiers: string[]) => void} */
 		const push = (offset, length, type, modifiers) => {
@@ -59,14 +65,22 @@ class GhostSemanticTokensProvider {
 			builder.push(start.line, start.character, length, LEGEND.tokenTypes.indexOf(type), encode(modifiers));
 		};
 
-		// Module accesses: `module.member`.
+		// Module accesses: `module.member`, resolved through whatever the
+		// leading name is actually bound to — its own name, needing no import
+		// (`console`), or an import binding, aliased or not.
 		const access = /\b([A-Za-z_]\w*)\s*\.\s*([A-Za-z_]\w*)/g;
 		let match;
 
 		while ((match = access.exec(stripped)) !== null) {
-			const [, moduleName, memberName] = match;
+			const [, boundName, memberName] = match;
 
-			if (shadowed.has(moduleName) || !model.moduleByName.has(moduleName)) {
+			if (shadowed.has(boundName)) {
+				continue;
+			}
+
+			const moduleName = analyzer.resolveModuleName(model, boundName, imports);
+
+			if (!moduleName) {
 				continue;
 			}
 
@@ -78,7 +92,7 @@ class GhostSemanticTokensProvider {
 				continue;
 			}
 
-			push(match.index, moduleName.length, 'namespace', ['defaultLibrary']);
+			push(match.index, boundName.length, 'namespace', ['defaultLibrary']);
 
 			const found = api.findModuleMember(model, moduleName, memberName);
 
@@ -94,13 +108,25 @@ class GhostSemanticTokensProvider {
 			}
 		}
 
-		// Global functions, only where called and not shadowed.
+		// Calls to a global function (`type`) or to a name pulled in directly
+		// with `import { sqrt } from "ghost:math"` — callable under its own
+		// name, without the module prefix.
 		const globals = /\b([A-Za-z_]\w*)\s*\(/g;
 
 		while ((match = globals.exec(stripped)) !== null) {
 			const name = match[1];
 
-			if (shadowed.has(name) || !api.findFunction(model, name)) {
+			if (shadowed.has(name)) {
+				continue;
+			}
+
+			const fn = api.findFunction(model, name);
+			const binding = imports.get(name);
+			const importedOwner = binding && binding.kind === 'member' ? model.moduleByName.get(binding.module) : undefined;
+			const importedMethod = importedOwner &&
+				importedOwner.members.some((member) => member.name === binding.member && member.kind === 'method');
+
+			if (!fn && !importedMethod) {
 				continue;
 			}
 
@@ -113,7 +139,8 @@ class GhostSemanticTokensProvider {
 
 		// Lumen's engine callbacks, where they are declared. The engine finds
 		// these by name, so marking them makes a misspelt one visible — it would
-		// otherwise simply never be called, with nothing to report.
+		// otherwise simply never be called, with nothing to report. Plain
+		// top-level declarations, unaffected by the import system.
 		const declarations = /\bfunction\s+([A-Za-z_]\w*)\s*\(/g;
 
 		while ((match = declarations.exec(stripped)) !== null) {
@@ -131,8 +158,8 @@ class GhostSemanticTokensProvider {
 }
 
 /**
- * Names the document binds itself. A module name is only a module until
- * something in the file assigns to it.
+ * Names the document assigns to itself. An import binding is only good until
+ * something in the file reassigns the same name.
  *
  * @param {string} text
  * @returns {Set<string>}
@@ -153,20 +180,6 @@ function shadowedNames(text) {
 	};
 
 	collect(analyzer.parseSymbols(text));
-
-	// Imported names bind too, and are not assignments.
-	const imported = /\bimport\s+([^\n]*?)\bfrom\b/g;
-	let match;
-
-	while ((match = imported.exec(analyzer.strip(text))) !== null) {
-		for (const name of match[1].split(',')) {
-			const cleaned = name.trim().split(/\s+as\s+/).pop();
-
-			if (cleaned && /^[A-Za-z_]\w*$/.test(cleaned)) {
-				names.add(cleaned);
-			}
-		}
-	}
 
 	return names;
 }

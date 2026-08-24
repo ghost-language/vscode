@@ -72,13 +72,15 @@ class GhostSignatureHelpProvider {
 	 */
 	resolve(model, document, upToName, name, nameStart) {
 		const before = upToName.slice(0, nameStart);
+		const text = document.getText();
 
 		if (/\.\s*$/.test(before)) {
 			const chain = analyzer.receiverChain(before, before.lastIndexOf('.'));
 
 			if (chain) {
-				const known = analyzer.inferTypes(model, document.getText());
-				const resolved = analyzer.resolveChain(model, chain, known);
+				const known = analyzer.inferTypes(model, text);
+				const imports = analyzer.resolveImports(model, text);
+				const resolved = analyzer.resolveChain(model, chain, known, imports);
 
 				if (resolved && resolved.kind === 'module') {
 					const found = api.findModuleMember(model, resolved.name, name);
@@ -113,6 +115,27 @@ class GhostSignatureHelpProvider {
 
 		if (fn) {
 			return { signature: fn.signature, doc: fn.doc };
+		}
+
+		// A bare call can also be a name pulled in with `import { sqrt } from
+		// "ghost:math"` — reachable, and callable, without the module prefix.
+		const binding = analyzer.resolveImports(model, text).get(name);
+
+		if (binding && binding.kind === 'member') {
+			const owner = model.moduleByName.get(binding.module);
+			const member = owner && owner.members.find((candidate) => candidate.name === binding.member);
+
+			if (member && member.signature) {
+				return { signature: member.signature, doc: member.doc };
+			}
+		}
+
+		if (binding && binding.kind === 'class') {
+			const type = model.typeByName.get(/** @type {string} */ (binding.type));
+
+			if (type) {
+				return { signature: 'new ' + type.name + '(...)', doc: type.doc };
+			}
 		}
 
 		return undefined;

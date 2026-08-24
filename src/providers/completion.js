@@ -45,7 +45,113 @@ class GhostCompletionProvider {
 			return this.memberCompletions(model, document, position, stripped, dotIndex);
 		}
 
+		// Writing an `import` needs its own completions - a module's members
+		// are not offered here at all, only what the statement itself takes:
+		// which module, and (inside `{ }`) which of that module's names.
+		if (/^\s*import\b/.test(stripped)) {
+			const items = this.importStatementCompletions(model, document, position, stripped);
+
+			if (items) {
+				return items;
+			}
+		}
+
 		return this.globalCompletions(model, document, position);
+	}
+
+	/**
+	 * Completions for the `import` statement itself.
+	 *
+	 * Almost everything in the standard library and in Lumen now has to be
+	 * imported before it can be used at all, so writing the import is the
+	 * first thing a script does with a module - this is where naming it
+	 * should be easiest, not an afterthought.
+	 *
+	 * @param {Api} model
+	 * @param {vscode.TextDocument} document
+	 * @param {vscode.Position} position
+	 * @param {string} strippedUpToCursor
+	 * @returns {vscode.CompletionItem[] | undefined} undefined defers to the caller's normal completion
+	 */
+	importStatementCompletions(model, document, position, strippedUpToCursor) {
+		const fullLine = document.lineAt(position.line).text;
+		const rawUpToCursor = fullLine.slice(0, position.character);
+
+		// Typing the scheme name inside an already-open string: `import
+		// "ghost:` or `import "lumen:ca`.
+		const schemeMatch = /import\s+["']([A-Za-z][A-Za-z0-9+.-]+):([A-Za-z0-9_]*)$/.exec(rawUpToCursor);
+
+		if (schemeMatch) {
+			const [, scheme] = schemeMatch;
+
+			return model.modules
+				.filter((module) => module.source === scheme && !module.global)
+				.map((module) => {
+					const item = new vscode.CompletionItem(module.name, vscode.CompletionItemKind.Module);
+
+					item.detail = (module.source === 'lumen' ? 'Lumen' : 'Ghost') + ' module';
+					item.documentation = new vscode.MarkdownString(module.doc);
+
+					return item;
+				});
+		}
+
+		// Inside `{ ... }` of a `from` clause. The module the names come from is
+		// written *after* the braces (`import { a, b } from "scheme:name"`), so
+		// this only resolves when it is already there later on the same line -
+		// editing an existing import to pull in one more name, typically.
+		const braceOpen = strippedUpToCursor.lastIndexOf('{');
+		const braceCloseBeforeCursor = strippedUpToCursor.lastIndexOf('}');
+
+		if (braceOpen !== -1 && braceOpen > braceCloseBeforeCursor) {
+			const afterCursor = fullLine.slice(position.character);
+			const fromMatch = /^[^{}]*\}\s*from\s+["']([A-Za-z][A-Za-z0-9+.-]+):([A-Za-z0-9_]+)["']/.exec(afterCursor);
+
+			if (!fromMatch) {
+				return [];
+			}
+
+			const [, scheme, moduleName] = fromMatch;
+			const module = model.moduleByName.get(moduleName);
+			const already = new Set(strippedUpToCursor.slice(braceOpen + 1).match(/[A-Za-z_]\w*/g) || []);
+			/** @type {vscode.CompletionItem[]} */
+			const items = [];
+
+			for (const member of (module ? module.members : [])) {
+				if (!already.has(member.name)) {
+					items.push(this.memberItem(member, moduleName, /** @type {import('../api/types').Source} */ (scheme)));
+				}
+			}
+
+			for (const type of api.classesOf(model, /** @type {import('../api/types').Source} */ (scheme), moduleName)) {
+				if (!already.has(type.name)) {
+					items.push(this.classItem(type));
+				}
+			}
+
+			return items;
+		}
+
+		// Right after `import `, with at most a bare partial name typed and
+		// nothing else on the line - offer every importable module, inserting
+		// the whole `"scheme:name"` path.
+		if (/^\s*import\s+[A-Za-z]*$/.test(strippedUpToCursor)) {
+			return model.modules
+				.filter((module) => !module.global)
+				.map((module) => {
+					const item = new vscode.CompletionItem(module.name, vscode.CompletionItemKind.Module);
+
+					item.detail = (module.source === 'lumen' ? 'Lumen' : 'Ghost') + ' module';
+					item.documentation = new vscode.MarkdownString(module.doc);
+					item.insertText = new vscode.SnippetString('"' + module.source + ':' + module.name + '"');
+					item.filterText = module.name;
+					item.sortText = '0' + module.name;
+
+					return item;
+				});
+		}
+
+		return undefined;
 	}
 
 	/**
@@ -68,7 +174,8 @@ class GhostCompletionProvider {
 
 		if (chain) {
 			const known = analyzer.inferTypes(model, text);
-			const resolved = analyzer.resolveChain(model, chain, known);
+			const imports = analyzer.resolveImports(model, text);
+			const resolved = analyzer.resolveChain(model, chain, known, imports);
 
 			if (resolved && resolved.kind === 'module') {
 				const module = model.moduleByName.get(resolved.name);
@@ -192,6 +299,20 @@ class GhostCompletionProvider {
 	}
 
 	/**
+	 * @param {import('../api/types').ObjectType} type
+	 * @returns {vscode.CompletionItem}
+	 */
+	classItem(type) {
+		const item = new vscode.CompletionItem(type.name, vscode.CompletionItemKind.Class);
+
+		item.detail = 'new ' + type.name + '(...)';
+		item.documentation = documentationFor(type, type.source);
+		item.insertText = new vscode.SnippetString(type.name + '($0)');
+
+		return item;
+	}
+
+	/**
 	 * @param {Api} model
 	 * @param {vscode.TextDocument} document
 	 * @param {vscode.Position} position
@@ -207,7 +328,14 @@ class GhostCompletionProvider {
 			items.push(item);
 		}
 
+		// Only `console` and `type` are reachable without an `import` — every
+		// other module and function needs one first, which is what
+		// `importedCompletions` and `importStatementCompletions` are for.
 		for (const module of model.modules) {
+			if (!module.global) {
+				continue;
+			}
+
 			const item = new vscode.CompletionItem(module.name, vscode.CompletionItemKind.Module);
 			item.detail = module.source === 'lumen' ? 'Lumen module' : 'Ghost module';
 			item.documentation = new vscode.MarkdownString(module.doc);
@@ -216,6 +344,10 @@ class GhostCompletionProvider {
 		}
 
 		for (const fn of model.functions) {
+			if (!fn.global) {
+				continue;
+			}
+
 			const item = new vscode.CompletionItem(fn.name, vscode.CompletionItemKind.Function);
 			item.detail = fn.signature;
 			item.documentation = documentationFor(fn, fn.source);
@@ -225,7 +357,85 @@ class GhostCompletionProvider {
 		}
 
 		items.push(...this.documentCompletions(document, position));
+		items.push(...this.importedCompletions(model, document, position));
 		items.push(...this.callbackCompletions(model, document, position));
+
+		return items;
+	}
+
+	/**
+	 * Names an `import` in this document actually binds — a module under its
+	 * own name or an `as` alias, a member pulled out with `from`, or a Lumen
+	 * class. These are the names that mean something here, as opposed to the
+	 * full standard library `globalCompletions` used to offer regardless of
+	 * whether anything imported it.
+	 *
+	 * @param {Api} model
+	 * @param {vscode.TextDocument} document
+	 * @param {vscode.Position} position
+	 * @returns {vscode.CompletionItem[]}
+	 */
+	importedCompletions(model, document, position) {
+		const imports = analyzer.resolveImports(model, document.getText());
+		const word = document.getWordRangeAtPosition(position);
+		const typing = word ? document.getText(word) : '';
+		/** @type {vscode.CompletionItem[]} */
+		const items = [];
+
+		for (const [name, binding] of imports) {
+			if (name === typing) {
+				continue;
+			}
+
+			if (binding.kind === 'module') {
+				const module = model.moduleByName.get(binding.module);
+				const item = new vscode.CompletionItem(name, vscode.CompletionItemKind.Module);
+
+				item.detail = (binding.scheme === 'lumen' ? 'Lumen' : 'Ghost') + ' module';
+
+				if (module) {
+					item.documentation = new vscode.MarkdownString(module.doc);
+				}
+
+				item.sortText = '1' + name;
+				items.push(item);
+			} else if (binding.kind === 'member') {
+				const module = model.moduleByName.get(binding.module);
+				const member = module && module.members.find((candidate) => candidate.name === binding.member);
+
+				if (member) {
+					const item = this.memberItem(member, binding.module, binding.scheme);
+
+					item.label = name;
+					item.filterText = name;
+
+					if (name !== member.name && member.kind === 'method') {
+						item.insertText = new vscode.SnippetString(name + (endsWithNoArguments(member) ? '()' : '($0)'));
+					} else if (name !== member.name) {
+						item.insertText = name;
+					}
+
+					item.sortText = '1' + name;
+					items.push(item);
+				}
+			} else if (binding.kind === 'class') {
+				const type = model.typeByName.get(/** @type {string} */ (binding.type));
+
+				if (type) {
+					const item = this.classItem(type);
+
+					item.label = name;
+					item.filterText = name;
+
+					if (name !== type.name) {
+						item.insertText = new vscode.SnippetString(name + '($0)');
+					}
+
+					item.sortText = '1' + name;
+					items.push(item);
+				}
+			}
+		}
 
 		return items;
 	}
