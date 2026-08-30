@@ -32,7 +32,7 @@ const noLumen = () => apiMod.build(false);
 
 // Every module except `console` needs an `import` before it can be used at
 // all — Ghost's own standard library and Lumen's modules alike. This fixture
-// exercises the bare form, the combined `name, { ... }` form, and a `.ghost`
+// exercises the bare form, the combined `name, { ... }` form, and a `.gs`
 // file import (which the analyzer cannot resolve, and isn't meant to).
 const GAME = `import "lumen:canvas"
 import "lumen:color"
@@ -272,6 +272,12 @@ console.log('\n== hover ==');
 
   const hv10 = h.provideHover(makeDoc('type(3)'), new vscode.Position(0, 1));
   check('global function hover', hv10 && /type\(value\)/.test(hv10.contents.value));
+
+  const hv11 = h.provideHover(makeDoc('x = "hi"\nx.charAt(0)'), new vscode.Position(1, 3));
+  check('inferred string literal hover finds a new core-type method', hv11 && /charAt\(index\)/.test(hv11.contents.value), hv11 && hv11.contents.value.slice(0, 80));
+
+  const hv12 = h.provideHover(makeDoc('import "ghost:date"\nd = date.duration(1, 0, 0)\nd.years()'), new vscode.Position(2, 3));
+  check('a value returned by a new date function resolves to the new Duration type', hv12 && /years\(\)/.test(hv12.contents.value), hv12 && hv12.contents.value.slice(0, 80));
 }
 
 console.log('\n== signature help ==');
@@ -309,6 +315,26 @@ console.log('\n== document symbols ==');
   check('finds top-level functions', ['load', 'update', 'draw'].every(n => syms.some(s => s.name === n)));
   const inRange = (s) => s.range.contains(s.selectionRange) && s.children.every(inRange);
   check('selection ranges nested in full ranges', syms.every(inRange));
+}
+
+console.log('\n== analyzer: template literals & destructuring ==');
+{
+  // A template literal's own text must not desynchronize brace matching or
+  // leak into the rest of the document; its `${ }` interpolation is real
+  // code, including a nested map literal's own braces.
+  const src = 'x = `count: ${count == 1 ? "one" : `many ${ {a: 1}.a }`}`\ny = 5\n';
+  const stripped = analyzer.strip(src);
+  const opens = (stripped.match(/\{/g) || []).length;
+  const closes = (stripped.match(/\}/g) || []).length;
+  check('template literal interpolation braces stay balanced after stripping', opens === closes, opens + ' vs ' + closes);
+  check('a template literal does not blank the line after it', /y = 5/.test(stripped));
+  check('a quoted string inside an interpolation is still blanked', !stripped.includes('one'));
+
+  const symbols = analyzer.parseSymbols('[a, b] = list\n{x, y} = someMap\n{x: alias} = someMap\n');
+  const names = symbols.map((s) => s.name);
+  check('list destructuring binds each name', names.includes('a') && names.includes('b'), names.join(','));
+  check('map destructuring shorthand binds each key as a name', names.includes('x') && names.includes('y'), names.join(','));
+  check('map destructuring with an alias binds the local name, not the key', names.includes('alias') && !names.includes('someMap'), names.join(','));
 }
 
 console.log('\n== semantic tokens ==');
@@ -409,9 +435,15 @@ console.log('\n== grammar and configuration ==');
   const comments = grammar.repository.comments.patterns.map((p) => p.begin);
   check('comment forms', comments.includes('//') && comments.includes('#') && comments.includes('/\\*'));
 
+  // Backtick template literals (§8.10) and `...` spread/rest are real syntax now.
+  check('grammar recognises template literals', Boolean(grammar.repository['template-string']) && serialised.includes('string.template.ghost'));
+  const spreadOp = grammar.repository.operators.patterns.find((p) => p.name === 'keyword.operator.spread.ghost');
+  check('spread/rest is its own operator, not two range dots and a stray accessor', Boolean(spreadOp) && spreadOp.match === '\\.\\.\\.');
+
   const pkg = read('package.json');
   check('declares an entry point', pkg.main === './src/extension.js');
   check('declares the Lumen setting', Boolean(pkg.contributes.configuration.properties['ghost.lumen.enable']));
+  check('registers the .gs extension', pkg.contributes.languages[0].extensions.includes('.gs'));
   check('entry point exists', fs.existsSync(path.join(root, pkg.main)));
   check('grammar path exists', fs.existsSync(path.join(root, pkg.contributes.grammars[0].path)));
   check('language configuration path exists', fs.existsSync(path.join(root, pkg.contributes.languages[0].configuration)));

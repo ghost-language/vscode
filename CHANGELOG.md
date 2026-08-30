@@ -5,6 +5,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-30
+### Added
+- Syntax highlighting for backtick template literals (`` `count: ${count}` ``): the interior interpolates as ordinary code, nested templates and nested `{ }` (a map literal, a block) balance correctly, and the auto-closing/surrounding pair for `` ` `` was added to the language configuration.
+- Completion, hover, signature help and semantic highlighting for the new `string`/`list`/`map`/`number` methods the interpreter added closing out its 1.0 gap list: `string` gained `contains`, `indexOf`/`lastIndexOf`, `repeat`, `padStart`/`padEnd`, `charAt`, `slice`, `reverse` and `isEmpty`; `list` gained `indexOf`, `find`/`findIndex`, `some`/`every`, `flatten`, `flatMap`, `chunk`, `fill`, `isEmpty`, `unshift`, `insertAt` and `removeAt`; `map` gained `remove` and `entries`; `number` gained `ceil`, `abs`, `pow`, `clamp` and the `isNaN`/`isFinite`/`isInfinite`/`isInteger`/`isEven`/`isOdd`/`isNegative`/`isPositive`/`isZero` predicates.
+- The `date` module documented with full time zone support: `ofInZone`, `inTimeZone`, `timeZone` and `zoneOffset`, plus `startOfWeek`/`endOfWeek`/`startOfYear`/`endOfYear` and the `subHours`/`subMinutes`/`subSeconds` counterparts to the existing `add*` functions.
+- A `Duration` type (`date.duration()`/`date.durationBetween()`, applied back with `date.addDuration()`/`date.subDuration()`), with its own hover and completion for `years()`/`months()`/`days()`/`hours()`/`minutes()`/`seconds()`/`toString()`.
+- Recognizes destructuring assignment (`[a, b] = list`, `{x, y} = map`, `{x: alias} = map`) for the outline, breadcrumbs and **Go to Symbol in File**, binding each name the same way a plain assignment already does.
+- `...` spread/rest is highlighted as its own operator, rather than partially matching the range operator — covers rest parameters (`function f(...args)`), call-site spread (`f(...list)`) and list-literal spread (`[...a, ...b]`).
+
+### Changed
+- Ghost's source file extension moved from `.ghost` to `.gs`; the extension now opens `.gs` files by default and keeps `.ghost` recognized for existing files.
+- `string.find`/`findAll`/`matches` documented with the receiver and argument the right way round: the receiver is the subject searched, the argument is the pattern (`subject.find(pattern)`), matching JS/PHP/Python — the interpreter had them inverted before. `findAll` now documented as returning every match in order, not just the first match's capture groups.
+- The static grammar's standard-library receiver list (used for the fallback highlight before a document's imports are known) dropped the retired `io`/`time` module names and added `date`/`file`/`path`, matching what `import "ghost:name"` actually resolves today. `print` no longer highlights as a builtin function — it was never one.
+- `Date`'s own `toString()` documented as reading its attached time zone (an explicit offset, or `Z` for the UTC default) rather than always UTC.
+
+### Fixed
+- `analyzer.js`'s comment/string stripping — the pass every provider runs a document through first — now recognizes backtick template literals. Previously a template literal's contents passed through completely unstripped, which could desynchronize brace matching and misfire the outline/variable regexes on any document using one.
+
 ## [0.2.0] - 2026-08-24
 ### Changed
 - Rewritten for Ghost's and Lumen's move to an import-based module system: only `console` and the

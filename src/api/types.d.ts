@@ -45,7 +45,7 @@ export interface ObjectType {
 	 * The module a class is `new`-able from — set only for a type reached via
 	 * `import { Name } from "<source>:<module>"` (Lumen's Image, Spritesheet,
 	 * Animation, Source, Font, Target, Quad). Unset for a core value type
-	 * (String, List, Number, Map, Date), which needs no import at all.
+	 * (String, List, Number, Map, Date, Duration), which needs no import at all.
 	 */
 	module?: string;
 }

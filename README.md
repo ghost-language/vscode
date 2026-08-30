@@ -9,9 +9,10 @@ Visual Studio Code support for the [Ghost](https://ghostlang.org/) programming l
 
 A TextMate grammar covering the whole language as the interpreter actually reads it: every reserved
 word, all three comment forms (`//`, `#`, and `/* */`), single- and double-quoted strings with the
-escapes the scanner recognises, class and trait declarations with `extends`, both method forms,
+escapes the scanner recognises, backtick template literals with `${}` interpolation (nested templates
+and nested `{ }` balance correctly), class and trait declarations with `extends`, both method forms,
 `switch`/`case`/`default`, `use`, `new`, the import forms, and the full operator set including the
-compound assignments and `..`.
+compound assignments, `..`, and `...` spread/rest.
 
 ### Completion
 
@@ -109,7 +110,7 @@ left to do to `math`.
 
 You will need [Visual Studio Code](https://code.visualstudio.com/) >= `1.75`. Install **Ghost** from
 the [Marketplace](https://marketplace.visualstudio.com/vscode), or from the command palette
-(<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) with **Install Extension**. Open any `.ghost` file.
+(<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>) with **Install Extension**. Open any `.gs` file.
 
 ## Development
 

@@ -43,9 +43,47 @@ function strip(text) {
 		}
 	};
 
+	/**
+	 * One entry per currently-open backtick template literal:
+	 * `0` while scanning that template's own text, or a count of unmatched
+	 * `{` once `${` opens an interpolation — mirroring the scanner's own
+	 * per-template brace-depth stack, so a `}` belonging to a nested map
+	 * literal or block doesn't close the interpolation early. Nesting
+	 * (`` `${ `${x}` }` ``) falls out of simply pushing another entry.
+	 * @type {number[]}
+	 */
+	const templates = [];
+
 	while (index < text.length) {
 		const character = text[index];
 		const next = text[index + 1];
+
+		if (templates.length > 0 && templates[templates.length - 1] === 0) {
+			// Inside a template's own text, not one of its interpolations:
+			// blank everything except the escapes, the closing backtick, and
+			// the start of the next `${`.
+			if (character === '\\') {
+				blank(index, index + 2);
+				index += 2;
+				continue;
+			}
+
+			if (character === '`') {
+				templates.pop();
+				index++;
+				continue;
+			}
+
+			if (character === '$' && next === '{') {
+				templates[templates.length - 1] = 1;
+				index += 2;
+				continue;
+			}
+
+			blank(index, index + 1);
+			index++;
+			continue;
+		}
 
 		if (character === '/' && next === '*') {
 			const end = text.indexOf('*/', index + 2);
@@ -90,6 +128,27 @@ function strip(text) {
 			blank(index + 1, Math.min(cursor, text.length));
 			index = Math.min(cursor + 1, text.length);
 			continue;
+		}
+
+		if (character === '`') {
+			// Opens a template literal, top-level or nested inside another
+			// template's interpolation. Its own text is left untouched here
+			// and blanked once the loop comes back around with this frame on
+			// top — kept, like a quote, so a caller can still tell one was here.
+			templates.push(0);
+			index++;
+			continue;
+		}
+
+		if (templates.length > 0) {
+			// Inside a `${ ... }` interpolation: real code, left unblanked,
+			// but its braces are tracked against the innermost open template
+			// so a nested map literal or block's `}` doesn't end it early.
+			if (character === '{') {
+				templates[templates.length - 1]++;
+			} else if (character === '}') {
+				templates[templates.length - 1]--;
+			}
 		}
 
 		index++;
@@ -232,6 +291,43 @@ function parseSymbols(text) {
 		add('variable', match[1], nameAt, match.index + match[0].length, nameAt);
 	}
 
+	// Destructuring assignment: `[a, b] = list` binds each name
+	// positionally; `{x, y} = map` binds each name from the identically-named
+	// key; `{x: a} = map` binds map key `x` to the local name `a` instead.
+	// Statement-level only, so this looks at the start of a line like the
+	// plain-assignment pattern above.
+	const listDestructurePattern = /^[ \t]*\[([^[\]]*)\][ \t]*=(?!=)/gm;
+
+	while ((match = listDestructurePattern.exec(stripped)) !== null) {
+		const innerStart = match.index + match[0].indexOf('[') + 1;
+		const namePattern = /[A-Za-z_]\w*/g;
+		let nameMatch;
+
+		while ((nameMatch = namePattern.exec(match[1])) !== null) {
+			const nameAt = innerStart + nameMatch.index;
+
+			add('variable', nameMatch[0], nameAt, nameAt + nameMatch[0].length, nameAt);
+		}
+	}
+
+	const mapDestructurePattern = /^[ \t]*\{([^{}]*)\}[ \t]*=(?!=)/gm;
+
+	while ((match = mapDestructurePattern.exec(stripped)) !== null) {
+		const innerStart = match.index + match[0].indexOf('{') + 1;
+		// Each entry is `name` (shorthand) or `key: name` — the bound local
+		// name is the second identifier when there is one, else the first.
+		const entryPattern = /([A-Za-z_]\w*)(?:\s*:\s*([A-Za-z_]\w*))?/g;
+		let entryMatch;
+
+		while ((entryMatch = entryPattern.exec(match[1])) !== null) {
+			const boundName = entryMatch[2] || entryMatch[1];
+			const withinEntry = entryMatch[2] ? entryMatch[0].lastIndexOf(entryMatch[2]) : 0;
+			const nameAt = innerStart + entryMatch.index + withinEntry;
+
+			add('variable', boundName, nameAt, nameAt + boundName.length, nameAt);
+		}
+	}
+
 	return nest(flat);
 }
 
@@ -320,7 +416,7 @@ function enclosingType(symbols, offset) {
  * Splits an import path into its scheme and the name after it, mirroring the
  * interpreter's own `schemePattern` in `evaluator/import.go`: two or more
  * letters before a `:`, so a Windows drive letter is never mistaken for one.
- * A path with no such prefix is a `.ghost` file import instead, which this
+ * A path with no such prefix is a `.gs` file import instead, which this
  * analyzer cannot resolve — there is no project on disk to read it from.
  *
  * @param {string} path
@@ -346,7 +442,7 @@ function schemeOf(path) {
  * name resolves to, so the rest of the analyzer can tell a real module access
  * from a variable that merely happens to share a module's name.
  *
- * A `.ghost` file import (no `scheme:` prefix) binds nothing here — there is
+ * A `.gs` file import (no `scheme:` prefix) binds nothing here — there is
  * no project on disk to read its exports from — except that its own bound
  * name is still worth knowing is *taken*, which is what `parseSymbols`-based
  * shadow tracking already covers separately.

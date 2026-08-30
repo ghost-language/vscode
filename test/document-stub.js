@@ -28,7 +28,7 @@ function makeDoc(text) {
       }
       return undefined;
     },
-    uri: { toString: () => 'file:///test.ghost' }
+    uri: { toString: () => 'file:///test.gs' }
   };
 }
 module.exports = { makeDoc };

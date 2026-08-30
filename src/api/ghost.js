@@ -76,45 +76,60 @@ const MODULES = [
 	{
 		name: 'date',
 		source: 'ghost',
-		doc: 'Dates, modelled on date-fns: every function takes a `Date` and returns a new one — nothing mutates. **Every `Date` is UTC only; there is no time zone support.**\n\nA `Date` compares directly with `<`, `>`, `<=`, `>=`, `==` — there is no separate `isBefore()`/`isAfter()` — and supports no arithmetic operators of its own; use this module\'s functions instead.',
+		doc: 'Dates, modelled on date-fns: every function takes a `Date` (or two) and returns a new value — nothing mutates. A `Date` is an instant plus the time zone it should be read in, defaulting to UTC.\n\nThe instant is what `<`, `>`, `==` compare, and stays independent of the attached zone, so a comparison is reproducible everywhere the program runs; the zone only governs what reading a *calendar* position back out of that instant answers (`year()`, `format()`, `isWeekend()`, `startOfDay()`, `toString()`, ...). Time zones are always explicit, named IANA identifiers (`America/New_York`) — never read from the host machine\'s configured zone; there is no `date.local()`.\n\nA `Date` compares directly with `<`, `>`, `<=`, `>=`, `==` — there is no separate `isBefore()`/`isAfter()` — and supports no arithmetic operators of its own; use this module\'s functions instead.',
 		members: [
 			{ name: 'now', kind: 'method', signature: 'date.now()', returns: 'Date', doc: 'The current instant.' },
 			{ name: 'today', kind: 'method', signature: 'date.today()', returns: 'Date', doc: 'Today at 00:00:00 UTC.' },
-			{ name: 'of', kind: 'method', signature: 'date.of(year, month, day, [hour, minute, second])', returns: 'Date', doc: 'Builds a date from calendar components. **`month` is 1–12**, not 0-based. Errors — rather than rolling over — if the month, hour, minute or second is out of range, or the day does not exist in that month (Feb 30).' },
-			{ name: 'parseISO', kind: 'method', signature: 'date.parseISO(text)', returns: 'Date', doc: 'Parses `2024-01-15` or a full RFC3339 timestamp (`2024-01-15T09:30:00Z`).' },
+			{ name: 'of', kind: 'method', signature: 'date.of(year, month, day, [hour, minute, second])', returns: 'Date', doc: 'Builds a date from calendar components, read in UTC. **`month` is 1–12**, not 0-based. Errors — rather than rolling over — if the month, hour, minute or second is out of range, or the day does not exist in that month (Feb 30).' },
+			{ name: 'ofInZone', kind: 'method', signature: 'date.ofInZone(year, month, day, [hour, minute, second], zone)', returns: 'Date', doc: '`of()` with a required, trailing IANA `zone` — the components are read as civil time *in that zone*, not in UTC and then relabeled. `date.ofInZone(2024, 7, 15, 9, 0, 0, "America/New_York")` is a different instant than `date.inTimeZone(date.of(2024, 7, 15, 9, 0, 0), "America/New_York")`, which keeps the UTC instant and only changes how it is read back.' },
+			{ name: 'parseISO', kind: 'method', signature: 'date.parseISO(text)', returns: 'Date', doc: 'Parses `2024-01-15` or a full RFC3339 timestamp (`2024-01-15T09:30:00Z`). An explicit offset in the text is preserved rather than normalized away.' },
 			{ name: 'fromUnix', kind: 'method', signature: 'date.fromUnix(seconds)', returns: 'Date', doc: 'From a Unix timestamp.' },
 			{ name: 'toUnix', kind: 'method', signature: 'date.toUnix(d)', returns: 'Number', doc: 'Seconds since the epoch.' },
 			{ name: 'toUnixNano', kind: 'method', signature: 'date.toUnixNano(d)', returns: 'Number', doc: 'Nanoseconds since the epoch.' },
-			{ name: 'format', kind: 'method', signature: 'date.format(d, pattern)', returns: 'String', doc: 'Formats with date-fns-style pattern letters (not Go\'s reference layout): `yyyy`/`yy`, `MMMM`/`MMM`/`MM`/`M`, `dd`/`d`, `EEEE`/`EEE` (weekday name), `HH`/`H` (24h), `hh`/`h` (12h), `mm`, `ss`, `a` (AM/PM). Anything else is copied literally.' },
+			{ name: 'format', kind: 'method', signature: 'date.format(d, pattern)', returns: 'String', doc: 'Formats with date-fns-style pattern letters (not Go\'s reference layout): `yyyy`/`yy`, `MMMM`/`MMM`/`MM`/`M`, `dd`/`d`, `EEEE`/`EEE` (weekday name), `HH`/`H` (24h), `hh`/`h` (12h), `mm`, `ss`, `a` (AM/PM). Anything else is copied literally. Reads the date\'s own attached zone.' },
+			{ name: 'inTimeZone', kind: 'method', signature: 'date.inTimeZone(d, zone)', returns: 'Date', doc: 'Moves `d` to a named IANA zone without changing the instant it names — only what every zone-aware read (`year()`, `format()`, `isWeekend()`, `toString()`, ...) answers from that point on.' },
+			{ name: 'timeZone', kind: 'method', signature: 'date.timeZone(d)', returns: 'String', doc: 'The zone\'s IANA name, or `""` for a `Date` built from a bare numeric offset rather than a named zone (`date.parseISO("...-05:00")`, say), since there is no name to report.' },
+			{ name: 'zoneOffset', kind: 'method', signature: 'date.zoneOffset(d)', returns: 'Number', doc: 'The offset from UTC in seconds, east-positive, at that specific instant — daylight-saving-aware, so the same named zone can answer differently for two dates a few months apart.' },
 			{ name: 'addDays', kind: 'method', signature: 'date.addDays(d, n)', returns: 'Date', doc: 'Paired with `subDays` rather than taking a negative count.' },
 			{ name: 'subDays', kind: 'method', signature: 'date.subDays(d, n)', returns: 'Date' },
 			{ name: 'addWeeks', kind: 'method', signature: 'date.addWeeks(d, n)', returns: 'Date' },
 			{ name: 'subWeeks', kind: 'method', signature: 'date.subWeeks(d, n)', returns: 'Date' },
-			{ name: 'addMonths', kind: 'method', signature: 'date.addMonths(d, n)', returns: 'Date', doc: 'Clamps to the last valid day of the target month rather than rolling over — Jan 31 + 1 month is Feb 28 (or 29), not Mar 2/3.' },
+			{ name: 'addMonths', kind: 'method', signature: 'date.addMonths(d, n)', returns: 'Date', doc: 'Clamps to the last valid day of the target month rather than rolling over — Jan 31 + 1 month is Feb 28 (or 29), not Mar 2/3 — and keeps the wall-clock reading in the date\'s own zone across a daylight-saving change.' },
 			{ name: 'subMonths', kind: 'method', signature: 'date.subMonths(d, n)', returns: 'Date' },
 			{ name: 'addYears', kind: 'method', signature: 'date.addYears(d, n)', returns: 'Date', doc: 'Clamps the same way `addMonths` does, for Feb 29 on a non-leap target year.' },
 			{ name: 'subYears', kind: 'method', signature: 'date.subYears(d, n)', returns: 'Date' },
-			{ name: 'addHours', kind: 'method', signature: 'date.addHours(d, n)', returns: 'Date' },
+			{ name: 'addHours', kind: 'method', signature: 'date.addHours(d, n)', returns: 'Date', doc: 'Shifts by a fixed real duration regardless of zone — "add 3 hours" always means 3 real hours.' },
+			{ name: 'subHours', kind: 'method', signature: 'date.subHours(d, n)', returns: 'Date' },
 			{ name: 'addMinutes', kind: 'method', signature: 'date.addMinutes(d, n)', returns: 'Date' },
+			{ name: 'subMinutes', kind: 'method', signature: 'date.subMinutes(d, n)', returns: 'Date' },
 			{ name: 'addSeconds', kind: 'method', signature: 'date.addSeconds(d, n)', returns: 'Date' },
-			{ name: 'isSameDay', kind: 'method', signature: 'date.isSameDay(a, b)', returns: 'Boolean', doc: 'Whether two dates fall on the same calendar year, month and day.' },
-			{ name: 'isWeekend', kind: 'method', signature: 'date.isWeekend(d)', returns: 'Boolean', doc: 'Whether `d` falls on a Saturday or Sunday.' },
+			{ name: 'subSeconds', kind: 'method', signature: 'date.subSeconds(d, n)', returns: 'Date' },
+			{ name: 'isSameDay', kind: 'method', signature: 'date.isSameDay(a, b)', returns: 'Boolean', doc: 'Whether two dates fall on the same calendar year, month and day, each read in its own attached zone.' },
+			{ name: 'isWeekend', kind: 'method', signature: 'date.isWeekend(d)', returns: 'Boolean', doc: 'Whether `d` falls on a Saturday or Sunday, read in its own attached zone.' },
 			{ name: 'isLeapYear', kind: 'method', signature: 'date.isLeapYear(d)', returns: 'Boolean' },
-			{ name: 'differenceInDays', kind: 'method', signature: 'date.differenceInDays(a, b)', returns: 'Number', doc: 'Truncated toward zero; `differenceInDays(a, b) == -differenceInDays(b, a)`.' },
+			{ name: 'differenceInDays', kind: 'method', signature: 'date.differenceInDays(a, b)', returns: 'Number', doc: 'Truncated toward zero; `differenceInDays(a, b) == -differenceInDays(b, a)`. Compares instants, so either date\'s attached zone makes no difference.' },
 			{ name: 'differenceInHours', kind: 'method', signature: 'date.differenceInHours(a, b)', returns: 'Number' },
 			{ name: 'differenceInMinutes', kind: 'method', signature: 'date.differenceInMinutes(a, b)', returns: 'Number' },
 			{ name: 'differenceInSeconds', kind: 'method', signature: 'date.differenceInSeconds(a, b)', returns: 'Number' },
-			{ name: 'startOfDay', kind: 'method', signature: 'date.startOfDay(d)', returns: 'Date' },
-			{ name: 'endOfDay', kind: 'method', signature: 'date.endOfDay(d)', returns: 'Date', doc: '23:59:59.999999999 that day.' },
+			{ name: 'duration', kind: 'method', signature: 'date.duration(years, months, days, [hours, minutes, seconds])', returns: 'Duration', doc: 'Builds a `Duration` directly, mirroring `of()`\'s own shape. Every given component has to point the same direction — all positive or all negative (zero components don\'t count) — or it is a `Value` error.' },
+			{ name: 'durationBetween', kind: 'method', signature: 'date.durationBetween(a, b)', returns: 'Duration', doc: 'The calendar breakdown of `a - b` (same sign convention as `differenceInDays`) as whole months, then whole days, then an hours/minutes/seconds remainder — computed in whichever of `a`/`b` is chronologically earlier\'s attached zone, the same zone `addDuration` walks in when reconstructing the later one. Sits alongside, not instead of, `differenceInX` — "how many whole days apart" and "the full calendar breakdown" are different questions.' },
+			{ name: 'addDuration', kind: 'method', signature: 'date.addDuration(d, duration)', returns: 'Date', doc: 'Applies a `Duration` to `d`, walking months, then days, then the clock remainder — the order that makes `addDuration(a, durationBetween(b, a))` reconstruct `b` exactly.' },
+			{ name: 'subDuration', kind: 'method', signature: 'date.subDuration(d, duration)', returns: 'Date' },
+			{ name: 'startOfDay', kind: 'method', signature: 'date.startOfDay(d)', returns: 'Date', doc: 'Computed in `d`\'s own attached zone.' },
+			{ name: 'endOfDay', kind: 'method', signature: 'date.endOfDay(d)', returns: 'Date', doc: '23:59:59.999999999 that day, in `d`\'s own attached zone.' },
+			{ name: 'startOfWeek', kind: 'method', signature: 'date.startOfWeek(d)', returns: 'Date', doc: 'Treats Sunday as the first day of the week, matching `weekday()`\'s own `0 = Sunday` reading, rather than the ISO 8601 Monday-first week.' },
+			{ name: 'endOfWeek', kind: 'method', signature: 'date.endOfWeek(d)', returns: 'Date' },
 			{ name: 'startOfMonth', kind: 'method', signature: 'date.startOfMonth(d)', returns: 'Date' },
 			{ name: 'endOfMonth', kind: 'method', signature: 'date.endOfMonth(d)', returns: 'Date' },
-			{ name: 'year', kind: 'method', signature: 'date.year(d)', returns: 'Number' },
-			{ name: 'month', kind: 'method', signature: 'date.month(d)', returns: 'Number', doc: '1–12.' },
-			{ name: 'day', kind: 'method', signature: 'date.day(d)', returns: 'Number' },
-			{ name: 'hour', kind: 'method', signature: 'date.hour(d)', returns: 'Number' },
-			{ name: 'minute', kind: 'method', signature: 'date.minute(d)', returns: 'Number' },
-			{ name: 'second', kind: 'method', signature: 'date.second(d)', returns: 'Number' },
-			{ name: 'weekday', kind: 'method', signature: 'date.weekday(d)', returns: 'Number', doc: '0 (Sunday) through 6 (Saturday).' }
+			{ name: 'startOfYear', kind: 'method', signature: 'date.startOfYear(d)', returns: 'Date' },
+			{ name: 'endOfYear', kind: 'method', signature: 'date.endOfYear(d)', returns: 'Date' },
+			{ name: 'year', kind: 'method', signature: 'date.year(d)', returns: 'Number', doc: 'Reads `d`\'s own attached zone.' },
+			{ name: 'month', kind: 'method', signature: 'date.month(d)', returns: 'Number', doc: '1–12. Reads `d`\'s own attached zone.' },
+			{ name: 'day', kind: 'method', signature: 'date.day(d)', returns: 'Number', doc: 'Reads `d`\'s own attached zone.' },
+			{ name: 'hour', kind: 'method', signature: 'date.hour(d)', returns: 'Number', doc: 'Reads `d`\'s own attached zone.' },
+			{ name: 'minute', kind: 'method', signature: 'date.minute(d)', returns: 'Number', doc: 'Reads `d`\'s own attached zone.' },
+			{ name: 'second', kind: 'method', signature: 'date.second(d)', returns: 'Number', doc: 'Reads `d`\'s own attached zone.' },
+			{ name: 'weekday', kind: 'method', signature: 'date.weekday(d)', returns: 'Number', doc: '0 (Sunday) through 6 (Saturday), matching date-fns\' `getDay`. Reads `d`\'s own attached zone.' }
 		]
 	},
 	{
@@ -152,7 +167,7 @@ const MODULES = [
 		source: 'ghost',
 		doc: 'A small HTTP server, deliberately minimal.',
 		members: [
-			{ name: 'handle', kind: 'method', signature: 'http.handle(path, callback)', doc: 'Registers `callback(request)` for requests to `path`. `request` is a map with `method`, `host`, `contentLength`, `protocol`, `protocolMajor`, `protocolMinor` and `body`. A panic inside the handler answers a 500 rather than crashing the server.' },
+			{ name: 'handle', kind: 'method', signature: 'http.handle(path, callback)', doc: 'Registers `callback(request)` for requests to `path`. `request` is a map with `method`, `host`, `contentLength`, `protocol`, `protocolMajor`, `protocolMinor` and `body`. **The callback\'s own output writer is redirected to the HTTP response** — a handler produces its response body by calling `console.log`/etc. *inside* the callback, not by returning a value. A panic inside the handler answers a 500 rather than crashing the server.' },
 			{ name: 'listen', kind: 'method', signature: 'http.listen(port, [ready])', doc: 'Starts serving on `port`, calling `ready()` once, if given, right before blocking. Blocks until interrupted, then shuts down within 30 seconds.' }
 		]
 	},
@@ -371,9 +386,19 @@ const TYPES = [
 			{ name: 'toUpperCase', kind: 'method', signature: 'toUpperCase()', returns: 'String', doc: 'The string in uppercase.' },
 			{ name: 'toNumber', kind: 'method', signature: 'toNumber()', returns: 'Number', doc: 'Parses the string as a number — an integer first, then a float. Errors, with help, if it parses as neither.' },
 			{ name: 'toString', kind: 'method', signature: 'toString()', returns: 'String', doc: 'The string itself.' },
-			{ name: 'matches', kind: 'method', signature: 'matches(subject)', returns: 'Boolean', doc: 'Whether `subject` matches this string used as a regular expression.\n\n**The receiver is the pattern, not the subject.** `"^h".matches(name)` tests `name`.' },
-			{ name: 'find', kind: 'method', signature: 'find(subject)', returns: 'String', doc: 'The first match of this string, used as a regular expression, within `subject`. Returns an empty string when nothing matches.\n\n**The receiver is the pattern, not the subject.**' },
-			{ name: 'findAll', kind: 'method', signature: 'findAll(subject)', returns: 'List', doc: 'The first match\'s capture groups, as a list — not every match in `subject`, despite the name.\n\n**The receiver is the pattern, not the subject.**' }
+			{ name: 'matches', kind: 'method', signature: 'matches(pattern)', returns: 'Boolean', doc: 'Whether the receiver contains a match for `pattern`, compiled as a regular expression. **The receiver is the subject, `pattern` is the argument** — `subject.matches(pattern)`, matching JS/PHP/Python.' },
+			{ name: 'find', kind: 'method', signature: 'find(pattern)', returns: 'String', doc: 'The first match of `pattern` (a regular expression) within the receiver, or `""` if none. **The receiver is the subject, `pattern` is the argument.**' },
+			{ name: 'findAll', kind: 'method', signature: 'findAll(pattern)', returns: 'List', doc: 'Every match of `pattern` within the receiver, in order, as a list of the matched text — not, as in earlier releases, only the first match\'s own capture groups. **The receiver is the subject, `pattern` is the argument.**' },
+			{ name: 'contains', kind: 'method', signature: 'contains(substring)', returns: 'Boolean', doc: 'Plain substring search — named to match `list.contains()` rather than adding a second `includes` spelling.' },
+			{ name: 'indexOf', kind: 'method', signature: 'indexOf(substring)', returns: 'Number', doc: 'The position of the first match, as a rune index (not a byte offset); `-1` if not found.' },
+			{ name: 'lastIndexOf', kind: 'method', signature: 'lastIndexOf(substring)', returns: 'Number', doc: 'The position of the last match, as a rune index; `-1` if not found.' },
+			{ name: 'repeat', kind: 'method', signature: 'repeat(n)', returns: 'String', doc: '`n` copies concatenated. A `Value` error if `n` is negative.' },
+			{ name: 'padStart', kind: 'method', signature: 'padStart(length, [pad])', returns: 'String', doc: 'Grows to `length` runes by repeating `pad` (default a space) at the start, truncated to fit. A receiver already at or past `length`, or an empty `pad`, comes back unchanged.' },
+			{ name: 'padEnd', kind: 'method', signature: 'padEnd(length, [pad])', returns: 'String', doc: 'As `padStart`, padding at the end.' },
+			{ name: 'charAt', kind: 'method', signature: 'charAt(index)', returns: 'String', doc: 'The single-rune string at a rune position; `""` for a position out of range — a *position* read, so it is lenient rather than erroring (`at` was not added as a second name for this).' },
+			{ name: 'slice', kind: 'method', signature: 'slice(start, [end])', returns: 'String', doc: 'A new string of the runes from `start` up to `end` (default the string\'s length). A *range* read: out-of-range bounds raise an `Index` error, matching `list.slice()` (`substring` was not added as a second spelling).' },
+			{ name: 'reverse', kind: 'method', signature: 'reverse()', returns: 'String', doc: 'A new string with the runes reversed.' },
+			{ name: 'isEmpty', kind: 'method', signature: 'isEmpty()', returns: 'Boolean', doc: '`length() == 0`.' }
 		]
 	},
 	{
@@ -399,7 +424,20 @@ const TYPES = [
 			{ name: 'each', kind: 'method', signature: 'each(fn)', returns: 'List', doc: 'Calls `fn(element, index)` once per element for the side effect, and returns the list itself so a call can chain.' },
 			{ name: 'map', kind: 'method', signature: 'map(fn)', returns: 'List', doc: 'A new list built by calling `fn(element, index)` on every element.' },
 			{ name: 'filter', kind: 'method', signature: 'filter(fn)', returns: 'List', doc: 'A new list keeping the elements `fn(element, index)` answers true for.' },
-			{ name: 'reduce', kind: 'method', signature: 'reduce(fn, [initial])', doc: 'Folds the list to a single value with `fn(accumulator, element, index)`, left to right. With no `initial`, the first element seeds it — an empty list then needs one.' }
+			{ name: 'reduce', kind: 'method', signature: 'reduce(fn, [initial])', doc: 'Folds the list to a single value with `fn(accumulator, element, index)`, left to right. With no `initial`, the first element seeds it — an empty list then needs one.' },
+			{ name: 'indexOf', kind: 'method', signature: 'indexOf(value)', returns: 'Number', doc: 'The position of the first element equal to `value` (deep/structural equality, same rule as `contains`), or `-1`. Value-based search, pairing with the predicate-based `find`/`findIndex`.' },
+			{ name: 'find', kind: 'method', signature: 'find(fn)', doc: 'The first element `fn(element, index)` answers truthy for, or `null` if none.' },
+			{ name: 'findIndex', kind: 'method', signature: 'findIndex(fn)', returns: 'Number', doc: 'The index of the first element `fn(element, index)` answers truthy for, or `-1` if none.' },
+			{ name: 'some', kind: 'method', signature: 'some(fn)', returns: 'Boolean', doc: 'Whether `fn(element, index)` answers truthy for any element. Short-circuits, mirroring `||`.' },
+			{ name: 'every', kind: 'method', signature: 'every(fn)', returns: 'Boolean', doc: 'Whether `fn(element, index)` answers truthy for every element. Short-circuits, mirroring `&&`.' },
+			{ name: 'flatten', kind: 'method', signature: 'flatten()', returns: 'List', doc: 'A new list with every nested list\'s elements spliced in, recursively — to any depth, with no depth argument: one unambiguous behavior rather than a JS-style default depth of 1.' },
+			{ name: 'flatMap', kind: 'method', signature: 'flatMap(fn)', returns: 'List', doc: '`fn(element, index)` → a new list, with each result spliced in one level if it is itself a list, else kept as-is.' },
+			{ name: 'chunk', kind: 'method', signature: 'chunk(size)', returns: 'List', doc: 'A new list of new lists of at most `size` elements each, in order; the last chunk holds whatever remains. `size` must be positive (`Value` error otherwise).' },
+			{ name: 'fill', kind: 'method', signature: 'fill(value, [start], [end])', returns: 'List', doc: 'A new list with `value` in place of every element from `start` up to `end` (default the whole list). A *range* read: out-of-range bounds raise an `Index` error, the same convention `slice()` uses. Does not mutate.' },
+			{ name: 'isEmpty', kind: 'method', signature: 'isEmpty()', returns: 'Boolean', doc: '`length() == 0`.' },
+			{ name: 'unshift', kind: 'method', signature: 'unshift(value)', returns: 'Number', doc: 'Mutates in place; front-inserts `value` and returns the new length — the front-insert counterpart to `push`.' },
+			{ name: 'insertAt', kind: 'method', signature: 'insertAt(index, value)', returns: 'Number', doc: 'Mutates in place; inserts `value` at `index` and returns the new length, like `push`. An out-of-range `index` clamps to the nearest end rather than erroring.' },
+			{ name: 'removeAt', kind: 'method', signature: 'removeAt(index)', doc: 'Mutates in place; removes and returns the element at `index`, or `null` for an out-of-range index — the same leniency `pop()`/`shift()` give an empty list.' }
 		]
 	},
 	{
@@ -409,6 +447,19 @@ const TYPES = [
 		methods: [
 			{ name: 'round', kind: 'method', signature: 'round([places])', returns: 'Number', doc: 'Rounded to the nearest whole number, or to `places` decimal places if given. An already-whole number is returned unchanged.' },
 			{ name: 'floor', kind: 'method', signature: 'floor()', returns: 'Number', doc: 'The largest whole number no greater than this one. An already-whole number is returned unchanged.' },
+			{ name: 'ceil', kind: 'method', signature: 'ceil()', returns: 'Number', doc: 'The smallest whole number no less than this one. An already-whole number is returned unchanged.' },
+			{ name: 'abs', kind: 'method', signature: 'abs()', returns: 'Number', doc: 'The absolute value. An already-whole number stays an integer.' },
+			{ name: 'pow', kind: 'method', signature: 'pow(exponent)', returns: 'Number', doc: 'Raised to `exponent`. An integer receiver raised to a non-negative integer exponent stays an exact integer (checked for overflow), so the result can index a list; otherwise falls back to a float, matching `math.pow()`. Mirrors `math.pow(n, exponent)` for every input.' },
+			{ name: 'clamp', kind: 'method', signature: 'clamp(low, high)', returns: 'Number', doc: 'The receiver, pulled inside `[low, high]` — answers with one of the three values given rather than a computed one, so clamping whole numbers leaves them whole. A `Value` error if `low` is greater than `high`.' },
+			{ name: 'isNaN', kind: 'method', signature: 'isNaN()', returns: 'Boolean', doc: 'Only ever true for a float — an integer `Number` can\'t hold NaN.' },
+			{ name: 'isFinite', kind: 'method', signature: 'isFinite()', returns: 'Boolean' },
+			{ name: 'isInfinite', kind: 'method', signature: 'isInfinite()', returns: 'Boolean' },
+			{ name: 'isInteger', kind: 'method', signature: 'isInteger()', returns: 'Boolean', doc: 'True for every non-float `Number`, and for a float only if it is finite with no fractional part.' },
+			{ name: 'isEven', kind: 'method', signature: 'isEven()', returns: 'Boolean', doc: 'True only for an integral value of even parity.' },
+			{ name: 'isOdd', kind: 'method', signature: 'isOdd()', returns: 'Boolean', doc: 'True only for an integral value of odd parity.' },
+			{ name: 'isNegative', kind: 'method', signature: 'isNegative()', returns: 'Boolean' },
+			{ name: 'isPositive', kind: 'method', signature: 'isPositive()', returns: 'Boolean' },
+			{ name: 'isZero', kind: 'method', signature: 'isZero()', returns: 'Boolean' },
 			{ name: 'toString', kind: 'method', signature: 'toString()', returns: 'String', doc: 'The number rendered as a string.' }
 		]
 	},
@@ -423,15 +474,31 @@ const TYPES = [
 			{ name: 'keys', kind: 'method', signature: 'keys()', returns: 'List' },
 			{ name: 'values', kind: 'method', signature: 'values()', returns: 'List' },
 			{ name: 'length', kind: 'method', signature: 'length()', returns: 'Number', doc: 'The number of pairs.' },
-			{ name: 'merge', kind: 'method', signature: 'merge(other)', returns: 'Map', doc: 'A new map holding this map\'s pairs and another\'s, leaving both untouched. Where a key appears in both, `other`\'s value wins.' }
+			{ name: 'merge', kind: 'method', signature: 'merge(other)', returns: 'Map', doc: 'A new map holding this map\'s pairs, in their own order, followed by `other`\'s. On a key collision `other`\'s value wins, but the key keeps this map\'s position for it.' },
+			{ name: 'remove', kind: 'method', signature: 'remove(key)', doc: 'Mutates in place; removes `key` entirely (dropping it from insertion order, leaving no gap) and returns the value that was stored there, or `null` if `key` was not present — the same leniency `pop()`/`shift()` give an empty list. Named to match `list.removeAt()` rather than adding `delete` as a second spelling.' },
+			{ name: 'entries', kind: 'method', signature: 'entries()', returns: 'List', doc: 'A new list of `[key, value]` two-element lists, one per entry, in insertion order — for symmetry with `keys()`/`values()`.' }
 		]
 	},
 	{
 		name: 'Date',
 		source: 'ghost',
-		doc: 'An instant in time, always UTC. Returned by the `date` module\'s functions, never constructed directly.\n\nCompares directly with `<`, `>`, `<=`, `>=`, `==` — there is no `isBefore()`/`isAfter()` method. Supports no arithmetic operators; use the `date` module\'s functions.',
+		doc: 'An instant in time plus the time zone it should be read in, defaulting to UTC. Returned by the `date` module\'s functions, never constructed directly.\n\n`<`, `>`, `<=`, `>=`, `==` compare the instant — independent of either operand\'s attached zone, so a comparison is reproducible everywhere the program runs — there is no `isBefore()`/`isAfter()` method. Supports no arithmetic operators; use the `date` module\'s functions. A *calendar* read (`year()`, `format()`, `isWeekend()`, `startOfDay()`, `toString()`, ...) answers relative to the date\'s own attached zone, moved with `date.inTimeZone()`.',
 		methods: [
-			{ name: 'toString', kind: 'method', signature: 'toString()', returns: 'String', doc: 'ISO 8601 / RFC3339, e.g. `2024-01-15T09:30:00Z`.' }
+			{ name: 'toString', kind: 'method', signature: 'toString()', returns: 'String', doc: 'ISO 8601 / RFC3339 in the date\'s own attached zone — `Z` for the UTC default (`2024-01-15T09:30:00Z`), an explicit offset otherwise (`2024-01-15T09:30:00-05:00`).' }
+		]
+	},
+	{
+		name: 'Duration',
+		source: 'ghost',
+		doc: 'A calendar-and-clock span kept as six separate components (years, months, days, hours, minutes, seconds) rather than one fixed length, since "1 month" has no fixed number of days. Built by `date.duration()`/`date.durationBetween()`; applied back to a `Date` with `date.addDuration()`/`date.subDuration()`.\n\n`==`/`!=` compare all six components directly (structural equality, like `list`). Ordering (`<`, `>`, `<=`, `>=`) and arithmetic operators are unsupported — unlike two instants, "which of two spans is longer" has no single answer without a reference date.',
+		methods: [
+			{ name: 'years', kind: 'method', signature: 'years()', returns: 'Number' },
+			{ name: 'months', kind: 'method', signature: 'months()', returns: 'Number' },
+			{ name: 'days', kind: 'method', signature: 'days()', returns: 'Number' },
+			{ name: 'hours', kind: 'method', signature: 'hours()', returns: 'Number' },
+			{ name: 'minutes', kind: 'method', signature: 'minutes()', returns: 'Number' },
+			{ name: 'seconds', kind: 'method', signature: 'seconds()', returns: 'Number' },
+			{ name: 'toString', kind: 'method', signature: 'toString()', returns: 'String', doc: 'An ISO 8601 duration, e.g. `P1Y2M3DT4H5M6S`, or `PT0S` for a zero duration.' }
 		]
 	}
 ];

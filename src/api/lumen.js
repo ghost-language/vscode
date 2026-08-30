@@ -5,7 +5,7 @@
  * The Lumen game engine's surface.
  *
  * Lumen is a 2D engine that a game drives entirely from Ghost, so there is no
- * separate Lumen syntax — a Lumen game is `.ghost` files. What Lumen adds is a
+ * separate Lumen syntax — a Lumen game is `.gs` files. What Lumen adds is a
  * set of modules registered under its own `lumen:` import scheme, a handful
  * of object types its modules hand back as `new`-able classes, and the
  * callbacks the engine looks for by name.

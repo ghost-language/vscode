@@ -4,7 +4,7 @@
     "icon": "icon.png",
     "description": "Ghost language support for Visual Studio Code, including the Lumen game engine.",
     "publisher": "GhostLanguage",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "license": "MIT",
     "keywords": [
         "ghost",
@@ -56,6 +56,7 @@
                     "ghost"
                 ],
                 "extensions": [
+                    ".gs",
                     ".ghost"
                 ],
                 "configuration": "./ghost.configuration.json",
