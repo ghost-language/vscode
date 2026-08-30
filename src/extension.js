@@ -18,7 +18,7 @@ const onDidChangeSemanticTokens = new vscode.EventEmitter();
  * Whether the Lumen surface is in scope.
  *
  * Lumen is a game engine for Ghost rather than a language of its own — a Lumen
- * game is `.ghost` source — so its modules and callbacks are folded into the
+ * game is `.gs` source — so its modules and callbacks are folded into the
  * Ghost surface rather than given a language of their own. A project that is
  * plain Ghost can turn them off, so that a variable named `window` or `image`
  * is not dressed up as something from an engine it does not use.
